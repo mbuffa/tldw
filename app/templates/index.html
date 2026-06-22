@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tl;dw</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f0f10;
+      color: #e2e2e5;
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+    }
+
+    /* ── sidebar ── */
+    aside {
+      background: #17171a;
+      border-right: 1px solid #2a2a2e;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid #2a2a2e;
+    }
+
+    .sidebar-header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .sidebar-header p {
+      font-size: 0.75rem;
+      color: #6b6b78;
+      margin-top: 2px;
+    }
+
+    form.submit-form {
+      padding: 16px 20px;
+      border-bottom: 1px solid #2a2a2e;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    form.submit-form input[type="text"] {
+      width: 100%;
+      background: #0f0f10;
+      border: 1px solid #2a2a2e;
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: #e2e2e5;
+      font-size: 0.8rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    form.submit-form input[type="text"]:focus {
+      border-color: #5865f2;
+    }
+
+    form.submit-form input[type="text"]::placeholder { color: #4a4a56; }
+
+    form.submit-form button {
+      background: #5865f2;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    form.submit-form button:hover { background: #4752c4; }
+
+    .history-label {
+      padding: 12px 20px 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #4a4a56;
+    }
+
+    .history-list {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .history-item {
+      display: block;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: background 0.1s, border-color 0.1s;
+      cursor: pointer;
+    }
+
+    .history-item:hover { background: #1e1e22; }
+
+    .history-item.active {
+      background: #1e1e22;
+      border-left-color: #5865f2;
+    }
+
+    .history-item .video-url {
+      font-size: 0.75rem;
+      color: #c2c2cc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .history-item .video-meta {
+      font-size: 0.65rem;
+      color: #4a4a56;
+      margin-top: 2px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-queued    { background: #2a2a2e; color: #6b6b78; }
+    .badge-processing { background: #1a3a5c; color: #60aaff; }
+    .badge-done      { background: #1a3a2a; color: #50d890; }
+    .badge-failed    { background: #3a1a1a; color: #f07070; }
+
+    /* ── main ── */
+    main {
+      padding: 40px 48px;
+      max-width: 820px;
+    }
+
+    .empty-state {
+      margin-top: 80px;
+      text-align: center;
+      color: #3a3a44;
+    }
+
+    .empty-state svg { margin-bottom: 16px; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ── video detail ── */
+    .video-detail h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+
+    .video-detail .video-detail-meta {
+      font-size: 0.75rem;
+      color: #4a4a56;
+      margin-bottom: 24px;
+    }
+
+    /* progress log */
+    .progress-log {
+      background: #17171a;
+      border: 1px solid #2a2a2e;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      font-size: 0.78rem;
+      line-height: 1.6;
+    }
+
+    .progress-log .log-line { color: #6b6b78; }
+    .progress-log .log-line.active { color: #60aaff; }
+    .progress-log .log-line.ok { color: #50d890; }
+    .progress-log .log-line.err { color: #f07070; }
+
+    /* summary box */
+    .summary-box {
+      background: #17171a;
+      border: 1px solid #2a2a2e;
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .summary-box h3 {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #4a4a56;
+      margin-bottom: 12px;
+    }
+
+    .summary-box p {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: #c2c2cc;
+      white-space: pre-wrap;
+    }
+
+    .streaming-cursor::after {
+      content: "▌";
+      animation: blink 0.8s step-end infinite;
+      color: #60aaff;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .spinner {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border: 2px solid #2a2a2e;
+      border-top-color: #60aaff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<aside>
+  <div class="sidebar-header">
+    <h1>tl;dw</h1>
+    <p>Too long; didn't watch</p>
+  </div>
+
+  <form class="submit-form" method="POST" action="/submit">
+    <input type="text" name="url" placeholder="Paste a YouTube URL…" required autofocus />
+    <button type="submit">Summarise</button>
+  </form>
+
+  <div class="history-label">History</div>
+
+  <div class="history-list">
+    {% for v in videos %}
+    <a class="history-item {% if active_video and active_video.id == v.id %}active{% endif %}"
+       href="/video/{{ v.id }}">
+      <div class="video-url">{{ v.url }}</div>
+      <div class="video-meta">
+        <span class="badge badge-{{ v.status }}">{{ v.status }}</span>
+        <span>{{ v.created_at.strftime('%b %d, %H:%M') }}</span>
+      </div>
+    </a>
+    {% else %}
+    <div style="padding: 16px 20px; font-size: 0.75rem; color: #3a3a44;">No videos yet.</div>
+    {% endfor %}
+  </div>
+</aside>
+
+<main>
+  {% if active_video %}
+  <div class="video-detail">
+    <h2>{{ active_video.url }}</h2>
+    <div class="video-detail-meta">
+      ID: {{ active_video.video_id }} &nbsp;·&nbsp;
+      Submitted {{ active_video.created_at.strftime('%Y-%m-%d %H:%M') }}
+    </div>
+
+    <div class="progress-log" id="progress-log">
+      {% if active_video.status == 'done' %}
+        <div class="log-line ok">✓ Transcript fetched.</div>
+        <div class="log-line ok">✓ Summary complete.</div>
+      {% elif active_video.status == 'failed' %}
+        <div class="log-line err">✗ {{ active_video.error }}</div>
+      {% else %}
+        <div class="log-line active" id="log-current">
+          <span class="spinner"></span> Waiting in queue…
+        </div>
+      {% endif %}
+    </div>
+
+    {% if active_video.status == 'done' and active_video.summary %}
+    <div class="summary-box" id="summary-box">
+      <h3>Summary</h3>
+      <p id="summary-text">{{ active_video.summary }}</p>
+    </div>
+    {% elif active_video.status not in ('done', 'failed') %}
+    <div class="summary-box" id="summary-box">
+      <h3>Summary</h3>
+      <p id="summary-text" class="streaming-cursor"></p>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if active_video.status not in ('done', 'failed') %}
+  <script>
+    (function () {
+      const videoId = {{ active_video.id }};
+      const log = document.getElementById('progress-log');
+      const summaryText = document.getElementById('summary-text');
+      const summaryBox = document.getElementById('summary-box');
+
+      function addLog(text, cls) {
+        const line = document.createElement('div');
+        line.className = 'log-line ' + cls;
+        line.textContent = text;
+        log.appendChild(line);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      const src = new EventSource(`/video/${videoId}/stream`);
+
+      src.addEventListener('processing', () => {
+        const cur = document.getElementById('log-current');
+        if (cur) cur.remove();
+        addLog('⏳ Job started, fetching transcript…', 'active');
+      });
+
+      src.addEventListener('fetching_transcript', () => {
+        addLog('⏳ Fetching transcript…', 'active');
+      });
+
+      src.addEventListener('transcript_ready', (e) => {
+        const d = JSON.parse(e.data);
+        addLog('✓ ' + d.message, 'ok');
+        addLog('⏳ Summarising with LLM…', 'active');
+      });
+
+      src.addEventListener('streaming', (e) => {
+        const d = JSON.parse(e.data);
+        if (!summaryBox) {
+          const box = document.createElement('div');
+          box.className = 'summary-box';
+          box.id = 'summary-box';
+          box.innerHTML = '<h3>Summary</h3><p id="summary-text" class="streaming-cursor"></p>';
+          document.querySelector('.video-detail').appendChild(box);
+        }
+        const st = document.getElementById('summary-text');
+        if (st) st.textContent += d.chunk;
+      });
+
+      src.addEventListener('done', (e) => {
+        src.close();
+        addLog('✓ Done.', 'ok');
+        const st = document.getElementById('summary-text');
+        if (st) st.classList.remove('streaming-cursor');
+        // refresh sidebar badge without full reload
+        setTimeout(() => location.reload(), 800);
+      });
+
+      src.addEventListener('failed', (e) => {
+        src.close();
+        const d = JSON.parse(e.data);
+        addLog('✗ ' + (d.message || 'Unknown error'), 'err');
+        const st = document.getElementById('summary-text');
+        if (st) st.classList.remove('streaming-cursor');
+        setTimeout(() => location.reload(), 800);
+      });
+
+      src.onerror = () => {
+        src.close();
+        addLog('Connection lost.', 'err');
+      };
+    })();
+  </script>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3a3a44" stroke-width="1.5">
+      <rect x="2" y="5" width="20" height="14" rx="2"/>
+      <polygon points="10,9 16,12 10,15" fill="#3a3a44" stroke="none"/>
+    </svg>
+    <p>Paste a YouTube link in the sidebar to get started.</p>
+  </div>
+  {% endif %}
+</main>
+
+</body>
+</html>
