@@ -143,6 +143,16 @@
     .submit-btn:hover { opacity: 0.7; }
     .submit-btn:active { opacity: 0.5; }
 
+    .form-error {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #c0392b;
+      margin-top: 8px;
+    }
+
     /* ── pipeline ── */
     .pipeline-section {
       margin-bottom: 72px;
@@ -510,6 +520,7 @@
           type="text"
           name="url"
           placeholder="paste a youtube link…"
+          value="{{ submitted_url|default('') }}"
           required
           autofocus
           spellcheck="false"
@@ -517,6 +528,7 @@
         />
         <button class="submit-btn" type="submit" aria-label="Summarise">GO →</button>
       </div>
+      {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
     </form>
   </section>
 

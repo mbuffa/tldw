@@ -1,6 +1,7 @@
 import os
 import re
 from typing import AsyncIterator
+from urllib.parse import urlparse
 from youtube_transcript_api import YouTubeTranscriptApi
 from langchain_ollama import OllamaLLM
 from langchain_core.prompts import PromptTemplate
@@ -10,13 +11,27 @@ YOUTUBE_ID_RE = re.compile(
     r"(?:v=|youtu\.be/|embed/|shorts/)([a-zA-Z0-9_-]{11})"
 )
 
+# Hosts that are considered valid YouTube origins.
+_YOUTUBE_HOSTS = {"youtube.com", "youtu.be"}
+
 PROMPT = PromptTemplate.from_template(
     "Summarize (in French) this transcript cleanly into key takeaways, "
     "three sentences max, and you speak like caveman:\n\n{transcript}"
 )
 
 
+def _is_youtube_host(host: str) -> bool:
+    """Return True if *host* is youtube.com, a subdomain of it, or youtu.be."""
+    host = host.lower()
+    return host in _YOUTUBE_HOSTS or host.endswith(".youtube.com")
+
+
 def extract_video_id(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Not a valid YouTube URL: {url}")
+    if not _is_youtube_host(parsed.netloc):
+        raise ValueError(f"Not a YouTube URL: {url}")
     match = YOUTUBE_ID_RE.search(url)
     if not match:
         raise ValueError(f"Could not extract video ID from URL: {url}")

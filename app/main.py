@@ -33,11 +33,17 @@ async def index(request: Request, db: Session = Depends(get_db)):
 
 
 @app.post("/submit")
-async def submit(url: str = Form(...), db: Session = Depends(get_db)):
+async def submit(request: Request, url: str = Form(...), db: Session = Depends(get_db)):
     try:
         vid = extract_video_id(url)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid YouTube URL")
+        videos = db.query(Video).order_by(Video.created_at.desc()).all()
+        return templates.TemplateResponse(
+            request,
+            "index.html",
+            {"videos": videos, "error": "Only YouTube URLs are allowed.", "submitted_url": url},
+            status_code=400,
+        )
 
     video = Video(url=url, video_id=vid, status="queued")
     db.add(video)
