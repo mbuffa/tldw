@@ -1,11 +1,11 @@
 import os
 import re
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 from urllib.parse import urlparse
-from youtube_transcript_api import YouTubeTranscriptApi
-from langchain_ollama import OllamaLLM
-from langchain_core.prompts import PromptTemplate
 
+from langchain_core.prompts import PromptTemplate
+from langchain_ollama import OllamaLLM
+from youtube_transcript_api import YouTubeTranscriptApi
 
 YOUTUBE_ID_RE = re.compile(
     r"(?:v=|youtu\.be/|embed/|shorts/)([a-zA-Z0-9_-]{11})"

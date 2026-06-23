@@ -1,17 +1,18 @@
 import asyncio
+import json
+import pathlib
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, Request, Form
+
+from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
+
 from app.database import get_db, init_db
 from app.models import Video
 from app.summarizer import extract_video_id
-from app.worker import get_queue, subscribe, unsubscribe, start_workers
-
-import json
-import pathlib
+from app.worker import get_queue, start_workers, subscribe, unsubscribe
 
 templates = Jinja2Templates(directory=str(pathlib.Path(__file__).parent / "templates"))
 
@@ -78,7 +79,7 @@ async def stream(video_id: int, db: Session = Depends(get_db)):
             while True:
                 try:
                     event = await asyncio.wait_for(q.get(), timeout=30)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     yield {"event": "ping", "data": ""}
                     continue
 

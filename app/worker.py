@@ -1,5 +1,6 @@
 import asyncio
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+
 from app.database import SessionLocal
 from app.models import Video
 from app.summarizer import process_video
