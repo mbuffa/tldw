@@ -5,391 +5,746 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>tl;dw</title>
   <style>
+    /* ── tokens ── */
+    :root {
+      --paper:        oklch(0.972 0.012 78);
+      --surface:      oklch(0.988 0.008 80);
+      --surface-deep: oklch(0.950 0.016 76);
+      --ink:          oklch(0.26 0.022 60);
+      --ink-muted:    oklch(0.52 0.018 65);
+      --ink-faint:    oklch(0.74 0.013 72);
+      --line:         oklch(0.88 0.014 76);
+      --accent:       oklch(0.70 0.15 68);
+      --accent-strong:oklch(0.56 0.16 58);
+      --accent-glow:  oklch(0.78 0.13 72 / 0.35);
+      --ok:           oklch(0.52 0.12 148);
+      --err:          oklch(0.52 0.19 28);
+      --err-bg:       oklch(0.96 0.025 28);
+      --mono: ui-monospace, "SF Mono", Menlo, "Cascadia Code", monospace;
+      --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f0f10;
-      color: #e2e2e5;
+      font-family: var(--sans);
+      background: var(--paper);
+      color: var(--ink);
       min-height: 100vh;
-      display: grid;
-      grid-template-columns: 320px 1fr;
+      padding: 0 20px 80px;
     }
 
-    /* ── sidebar ── */
-    aside {
-      background: #17171a;
-      border-right: 1px solid #2a2a2e;
+    /* ── page shell ── */
+    .page {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* ── header ── */
+    header {
+      padding: 56px 0 36px;
+    }
+
+    .wordmark {
+      font-family: var(--mono);
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      color: var(--ink);
+      line-height: 1;
+    }
+
+    .tagline {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--ink-faint);
+      margin-top: 6px;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── input hero ── */
+    .input-hero {
+      margin-bottom: 52px;
+    }
+
+    .input-wrap {
       display: flex;
-      flex-direction: column;
-      height: 100vh;
-      position: sticky;
-      top: 0;
+      align-items: stretch;
+      background: var(--surface);
+      border: 1.5px solid var(--line);
+      border-radius: 10px;
       overflow: hidden;
+      transition: border-color 0.18s ease-out, box-shadow 0.18s ease-out;
     }
 
-    .sidebar-header {
-      padding: 24px 20px 16px;
-      border-bottom: 1px solid #2a2a2e;
+    .input-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
     }
 
-    .sidebar-header h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: #fff;
-    }
-
-    .sidebar-header p {
-      font-size: 0.75rem;
-      color: #6b6b78;
-      margin-top: 2px;
-    }
-
-    form.submit-form {
-      padding: 16px 20px;
-      border-bottom: 1px solid #2a2a2e;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    form.submit-form input[type="text"] {
-      width: 100%;
-      background: #0f0f10;
-      border: 1px solid #2a2a2e;
-      border-radius: 6px;
-      padding: 8px 10px;
-      color: #e2e2e5;
-      font-size: 0.8rem;
-      outline: none;
-      transition: border-color 0.15s;
-    }
-
-    form.submit-form input[type="text"]:focus {
-      border-color: #5865f2;
-    }
-
-    form.submit-form input[type="text"]::placeholder { color: #4a4a56; }
-
-    form.submit-form button {
-      background: #5865f2;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 12px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    form.submit-form button:hover { background: #4752c4; }
-
-    .history-label {
-      padding: 12px 20px 6px;
-      font-size: 0.65rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #4a4a56;
-    }
-
-    .history-list {
-      overflow-y: auto;
-      flex: 1;
-    }
-
-    .history-item {
-      display: block;
-      padding: 10px 20px;
-      text-decoration: none;
-      border-left: 3px solid transparent;
-      transition: background 0.1s, border-color 0.1s;
-      cursor: pointer;
-    }
-
-    .history-item:hover { background: #1e1e22; }
-
-    .history-item.active {
-      background: #1e1e22;
-      border-left-color: #5865f2;
-    }
-
-    .history-item .video-url {
-      font-size: 0.75rem;
-      color: #c2c2cc;
+    .url-label {
+      position: absolute;
+      width: 1px; height: 1px;
+      overflow: hidden; clip: rect(0,0,0,0);
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
 
-    .history-item .video-meta {
-      font-size: 0.65rem;
-      color: #4a4a56;
-      margin-top: 2px;
-      display: flex;
-      gap: 8px;
-      align-items: center;
+    .url-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 16px 18px;
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      color: var(--ink);
     }
 
-    .badge {
-      display: inline-block;
-      padding: 1px 6px;
-      border-radius: 999px;
-      font-size: 0.6rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+    .url-input::placeholder {
+      color: var(--ink-faint);
     }
 
-    .badge-queued    { background: #2a2a2e; color: #6b6b78; }
-    .badge-processing { background: #1a3a5c; color: #60aaff; }
-    .badge-done      { background: #1a3a2a; color: #50d890; }
-    .badge-failed    { background: #3a1a1a; color: #f07070; }
-
-    /* ── main ── */
-    main {
-      padding: 40px 48px;
-      max-width: 820px;
-    }
-
-    .empty-state {
-      margin-top: 80px;
-      text-align: center;
-      color: #3a3a44;
-    }
-
-    .empty-state svg { margin-bottom: 16px; }
-    .empty-state p { font-size: 0.9rem; }
-
-    /* ── video detail ── */
-    .video-detail h2 {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #fff;
-      margin-bottom: 4px;
-      word-break: break-all;
-    }
-
-    .video-detail .video-detail-meta {
-      font-size: 0.75rem;
-      color: #4a4a56;
-      margin-bottom: 24px;
-    }
-
-    /* progress log */
-    .progress-log {
-      background: #17171a;
-      border: 1px solid #2a2a2e;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 24px;
-      font-size: 0.78rem;
-      line-height: 1.6;
-    }
-
-    .progress-log .log-line { color: #6b6b78; }
-    .progress-log .log-line.active { color: #60aaff; }
-    .progress-log .log-line.ok { color: #50d890; }
-    .progress-log .log-line.err { color: #f07070; }
-
-    /* summary box */
-    .summary-box {
-      background: #17171a;
-      border: 1px solid #2a2a2e;
-      border-radius: 8px;
-      padding: 20px;
-    }
-
-    .summary-box h3 {
-      font-size: 0.7rem;
+    .submit-btn {
+      background: var(--accent-strong);
+      color: var(--surface);
+      border: none;
+      padding: 0 24px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
       font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: background 0.15s ease-out, opacity 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .submit-btn:hover { background: oklch(0.48 0.16 58); }
+    .submit-btn:active { opacity: 0.85; }
+
+    /* ── pipeline ── */
+    .pipeline-section {
+      margin-bottom: 60px;
+    }
+
+    .pipeline-header {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #4a4a56;
-      margin-bottom: 12px;
+      color: var(--ink-faint);
+      margin-bottom: 28px;
     }
 
-    .summary-box p {
+    /* the node list */
+    .pipeline {
+      list-style: none;
+      position: relative;
+    }
+
+    .pipeline-node {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      grid-template-rows: auto auto;
+      column-gap: 20px;
+      position: relative;
+    }
+
+    /* spine segment: the vertical line between nodes */
+    .pipeline-node:not(:last-child) .node-spine {
+      position: absolute;
+      left: 15px;
+      top: 28px;
+      bottom: -4px;
+      width: 2px;
+      background: var(--line);
+      border-radius: 1px;
+      overflow: hidden;
+    }
+
+    .pipeline-node:not(:last-child) .node-spine::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--accent);
+      transform-origin: top;
+      transform: scaleY(0);
+      transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .pipeline-node.is-complete:not(:last-child) .node-spine::after,
+    .pipeline-node.is-active:not(:last-child) .node-spine::after {
+      /* don't fill the spine *below* the active node — only filled ones above */
+    }
+
+    /* filled spine for complete nodes */
+    .pipeline-node.is-complete .node-spine::after {
+      transform: scaleY(1);
+    }
+
+    /* node marker */
+    .node-marker {
+      grid-column: 1;
+      grid-row: 1;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+      transition: background 0.22s ease-out, border-color 0.22s ease-out,
+                  box-shadow 0.22s ease-out;
+    }
+
+    /* pending */
+    .pipeline-node.is-pending .node-marker {
+      background: var(--surface);
+      border: 2px solid var(--line);
+      color: var(--ink-faint);
+    }
+
+    /* active */
+    .pipeline-node.is-active .node-marker {
+      background: var(--accent);
+      border: 2px solid var(--accent);
+      color: var(--surface);
+      box-shadow: 0 0 0 4px var(--accent-glow);
+      animation: pulse-ring 1.6s ease-out infinite;
+    }
+
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0   var(--accent-glow); }
+      60%  { box-shadow: 0 0 0 7px oklch(0.78 0.13 72 / 0); }
+      100% { box-shadow: 0 0 0 7px oklch(0.78 0.13 72 / 0); }
+    }
+
+    /* complete */
+    .pipeline-node.is-complete .node-marker {
+      background: var(--ok);
+      border: 2px solid var(--ok);
+      color: var(--surface);
+    }
+
+    /* error */
+    .pipeline-node.is-error .node-marker {
+      background: var(--err);
+      border: 2px solid var(--err);
+      color: var(--surface);
+    }
+
+    /* node body */
+    .node-body {
+      grid-column: 2;
+      grid-row: 1;
+      padding: 5px 0 28px;
+    }
+
+    .node-label {
       font-size: 0.9rem;
-      line-height: 1.7;
-      color: #c2c2cc;
-      white-space: pre-wrap;
+      font-weight: 600;
+      color: var(--ink-muted);
+      line-height: 1.3;
+      transition: color 0.2s ease-out;
     }
 
-    .streaming-cursor::after {
-      content: "▌";
-      animation: blink 0.8s step-end infinite;
-      color: #60aaff;
+    .pipeline-node.is-active  .node-label { color: var(--ink); }
+    .pipeline-node.is-complete .node-label { color: var(--ink); }
+    .pipeline-node.is-error   .node-label { color: var(--err); }
+
+    .node-detail {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--ink-muted);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+
+    /* spinner */
+    .spinner {
+      display: none;
+      width: 13px; height: 13px;
+      border: 2px solid oklch(0.88 0.012 76 / 0.5);
+      border-top-color: var(--surface);
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+    }
+
+    .pipeline-node.is-active .spinner { display: inline-block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* summary panel (child of n-summary node body) */
+    .summary-panel {
+      margin-top: 14px;
+      background: var(--surface-deep);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px 20px;
+      display: none;
+    }
+
+    .summary-panel.visible { display: block; }
+
+    .summary-text {
+      font-family: var(--sans);
+      font-size: 0.93rem;
+      line-height: 1.75;
+      color: var(--ink);
+      white-space: pre-wrap;
+      max-width: 64ch;
+    }
+
+    .summary-text.streaming::after {
+      content: '▌';
+      animation: blink 0.75s step-end infinite;
+      color: var(--accent-strong);
     }
 
     @keyframes blink { 50% { opacity: 0; } }
 
-    .spinner {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border: 2px solid #2a2a2e;
-      border-top-color: #60aaff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin-right: 6px;
-      vertical-align: middle;
+    /* error panel */
+    .error-panel {
+      margin-top: 10px;
+      background: var(--err-bg);
+      border: 1px solid oklch(0.85 0.06 28);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--err);
+      line-height: 1.55;
+      display: none;
+    }
+    .error-panel.visible { display: block; }
+
+    /* reduced-motion */
+    @media (prefers-reduced-motion: reduce) {
+      .pipeline-node.is-active .node-marker { animation: none; }
+      .spinner { animation: none; }
+      .summary-text.streaming::after { animation: none; }
+      .node-spine::after { transition: none; }
     }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* ── history ── */
+    .history-section { margin-top: 8px; }
+
+    .history-divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin-bottom: 24px;
+    }
+
+    .history-label {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 14px;
+    }
+
+    .history-list { list-style: none; }
+
+    .history-item {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      color: inherit;
+      transition: background 0.12s ease-out;
+    }
+
+    .history-item:hover { background: var(--surface-deep); }
+
+    .history-item.is-active { background: oklch(0.96 0.02 72); }
+
+    .hist-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      position: relative;
+      top: 1px;
+    }
+
+    .hist-dot.st-queued     { background: var(--ink-faint); }
+    .hist-dot.st-processing { background: var(--accent); }
+    .hist-dot.st-done       { background: var(--ok); }
+    .hist-dot.st-failed     { background: var(--err); }
+
+    .hist-id {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+      flex-shrink: 0;
+    }
+
+    .hist-url {
+      font-size: 0.78rem;
+      color: var(--ink-muted);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .hist-status {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      flex-shrink: 0;
+    }
+
+    .hist-status.st-queued     { color: var(--ink-faint); }
+    .hist-status.st-processing { color: var(--accent-strong); }
+    .hist-status.st-done       { color: var(--ok); }
+    .hist-status.st-failed     { color: var(--err); }
+
+    .hist-time {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--ink-faint);
+      flex-shrink: 0;
+    }
+
+    .history-empty {
+      font-size: 0.82rem;
+      color: var(--ink-faint);
+      padding: 8px 12px;
+    }
+
+    /* ── idle state ── */
+    .pipeline-idle-hint {
+      font-size: 0.8rem;
+      color: var(--ink-faint);
+      font-style: italic;
+      padding: 4px 0 0 52px;
+    }
   </style>
 </head>
 <body>
 
-<aside>
-  <div class="sidebar-header">
-    <h1>tl;dw</h1>
-    <p>Too long; didn't watch</p>
-  </div>
+<div class="page">
 
-  <form class="submit-form" method="POST" action="/submit">
-    <input type="text" name="url" placeholder="Paste a YouTube URL…" required autofocus />
-    <button type="submit">Summarise</button>
-  </form>
+  <header>
+    <div class="wordmark">tl;dw</div>
+    <div class="tagline">too long; didn't watch</div>
+  </header>
 
-  <div class="history-label">History</div>
-
-  <div class="history-list">
-    {% for v in videos %}
-    <a class="history-item {% if active_video and active_video.id == v.id %}active{% endif %}"
-       href="/video/{{ v.id }}">
-      <div class="video-url">{{ v.url }}</div>
-      <div class="video-meta">
-        <span class="badge badge-{{ v.status }}">{{ v.status }}</span>
-        <span>{{ v.created_at.strftime('%b %d, %H:%M') }}</span>
+  <section class="input-hero">
+    <form method="POST" action="/submit">
+      <label class="url-label" for="url-input">YouTube URL</label>
+      <div class="input-wrap">
+        <input
+          id="url-input"
+          class="url-input"
+          type="text"
+          name="url"
+          placeholder="paste a youtube link…"
+          required
+          autofocus
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <button class="submit-btn" type="submit">GO →</button>
       </div>
-    </a>
-    {% else %}
-    <div style="padding: 16px 20px; font-size: 0.75rem; color: #3a3a44;">No videos yet.</div>
-    {% endfor %}
-  </div>
-</aside>
+    </form>
+  </section>
 
-<main>
-  {% if active_video %}
-  <div class="video-detail">
-    <h2>{{ active_video.url }}</h2>
-    <div class="video-detail-meta">
-      ID: {{ active_video.video_id }} &nbsp;·&nbsp;
-      Submitted {{ active_video.created_at.strftime('%Y-%m-%d %H:%M') }}
-    </div>
+  <!-- pipeline -->
+  <section class="pipeline-section" id="pipeline-section">
+    <div class="pipeline-header">Processing</div>
 
-    <div class="progress-log" id="progress-log">
-      {% if active_video.status == 'done' %}
-        <div class="log-line ok">✓ Transcript fetched.</div>
-        <div class="log-line ok">✓ Summary complete.</div>
-      {% elif active_video.status == 'failed' %}
-        <div class="log-line err">✗ {{ active_video.error }}</div>
-      {% else %}
-        <div class="log-line active" id="log-current">
-          <span class="spinner"></span> Waiting in queue…
+    {% if active_video %}
+    {# Set initial states based on server-rendered status #}
+    {% set status = active_video.status %}
+
+    <ul class="pipeline" role="list" aria-label="Processing steps">
+
+      <!-- node: submitted / queued -->
+      <li class="pipeline-node
+        {% if status == 'queued' %}is-active
+        {% elif status in ('processing', 'done', 'failed') %}is-complete
+        {% else %}is-pending{% endif %}"
+        id="n-queue"
+        {% if status == 'queued' %}aria-current="step"{% endif %}>
+        <div class="node-spine"></div>
+        <div class="node-marker" aria-hidden="true">
+          <span class="node-icon">
+            {% if status == 'queued' %}<span class="spinner"></span>
+            {% elif status in ('processing', 'done', 'failed') %}✓
+            {% else %}○{% endif %}
+          </span>
         </div>
-      {% endif %}
-    </div>
+        <div class="node-body">
+          <div class="node-label">
+            {% if status == 'queued' %}Waiting in queue{% else %}Submitted{% endif %}
+          </div>
+          <div class="node-detail" id="n-queue-detail">
+            <span class="hist-id">{{ active_video.video_id }}</span>
+          </div>
+        </div>
+      </li>
 
-    {% if active_video.status == 'done' and active_video.summary %}
-    <div class="summary-box" id="summary-box">
-      <h3>Summary</h3>
-      <p id="summary-text">{{ active_video.summary }}</p>
-    </div>
-    {% elif active_video.status not in ('done', 'failed') %}
-    <div class="summary-box" id="summary-box">
-      <h3>Summary</h3>
-      <p id="summary-text" class="streaming-cursor"></p>
-    </div>
+      <!-- node: fetching transcript -->
+      <li class="pipeline-node
+        {% if status == 'processing' %}is-active
+        {% elif status in ('done',) %}is-complete
+        {% elif status == 'failed' and not active_video.error %}is-error
+        {% else %}is-pending{% endif %}"
+        id="n-fetch"
+        {% if status == 'processing' %}aria-current="step"{% endif %}>
+        <div class="node-spine"></div>
+        <div class="node-marker" aria-hidden="true">
+          <span class="node-icon">
+            {% if status == 'processing' %}<span class="spinner"></span>
+            {% elif status in ('done',) %}✓
+            {% else %}○{% endif %}
+          </span>
+        </div>
+        <div class="node-body">
+          <div class="node-label">Fetching transcript</div>
+          <div class="node-detail" id="n-fetch-detail"></div>
+        </div>
+      </li>
+
+      <!-- node: summarising -->
+      <li class="pipeline-node
+        {% if status == 'done' %}is-complete
+        {% elif status == 'failed' %}is-error
+        {% else %}is-pending{% endif %}"
+        id="n-summary">
+        <div class="node-spine"></div>
+        <div class="node-marker" aria-hidden="true">
+          <span class="node-icon">
+            {% if status == 'done' %}✓
+            {% elif status == 'failed' %}✗
+            {% else %}○{% endif %}
+          </span>
+        </div>
+        <div class="node-body">
+          <div class="node-label">
+            {% if status == 'failed' %}Failed{% else %}Summarising{% endif %}
+          </div>
+          <div class="node-detail" id="n-summary-detail"></div>
+
+          {% if status == 'done' and active_video.summary %}
+          <div class="summary-panel visible" id="summary-panel">
+            <p class="summary-text" id="summary-text" aria-live="polite">{{ active_video.summary }}</p>
+          </div>
+          {% elif status == 'failed' %}
+          <div class="error-panel visible" id="error-panel">{{ active_video.error }}</div>
+          {% else %}
+          <div class="summary-panel" id="summary-panel">
+            <p class="summary-text" id="summary-text" aria-live="polite"></p>
+          </div>
+          <div class="error-panel" id="error-panel"></div>
+          {% endif %}
+        </div>
+      </li>
+
+      <!-- node: done -->
+      <li class="pipeline-node
+        {% if status == 'done' %}is-complete{% else %}is-pending{% endif %}"
+        id="n-done">
+        <div class="node-marker" aria-hidden="true">
+          <span class="node-icon">
+            {% if status == 'done' %}✓{% else %}○{% endif %}
+          </span>
+        </div>
+        <div class="node-body">
+          <div class="node-label">Done</div>
+          <div class="node-detail" id="n-done-detail">
+            {% if status == 'done' and active_video.completed_at %}
+            Completed {{ active_video.completed_at.strftime('%H:%M') }}
+            {% endif %}
+          </div>
+        </div>
+      </li>
+
+    </ul>
+
+    {% else %}
+    <!-- idle: show a faint preview of the pipeline -->
+    <ul class="pipeline" role="list" aria-label="Processing steps (idle)">
+      {% for label in ['Submitted', 'Fetching transcript', 'Summarising', 'Done'] %}
+      <li class="pipeline-node is-pending" {% if not loop.last %}style="margin-bottom:0"{% endif %}>
+        {% if not loop.last %}<div class="node-spine"></div>{% endif %}
+        <div class="node-marker" aria-hidden="true"><span class="node-icon">○</span></div>
+        <div class="node-body"><div class="node-label">{{ label }}</div></div>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="pipeline-idle-hint">Submit a URL above to start.</p>
     {% endif %}
-  </div>
+  </section>
 
-  {% if active_video.status not in ('done', 'failed') %}
-  <script>
-    (function () {
-      const videoId = {{ active_video.id }};
-      const log = document.getElementById('progress-log');
-      const summaryText = document.getElementById('summary-text');
-      const summaryBox = document.getElementById('summary-box');
+  <!-- history -->
+  <section class="history-section" id="history-section">
+    <hr class="history-divider" />
+    <div class="history-label">History</div>
+    <ul class="history-list" id="history-list">
+      {% for v in videos %}
+      <li>
+        <a class="history-item {% if active_video and active_video.id == v.id %}is-active{% endif %}"
+           href="/video/{{ v.id }}">
+          <span class="hist-dot st-{{ v.status }}" aria-hidden="true"></span>
+          <span class="hist-id">{{ v.video_id }}</span>
+          <span class="hist-url">{{ v.url }}</span>
+          <span class="hist-status st-{{ v.status }}">{{ v.status }}</span>
+          <span class="hist-time">{{ v.created_at.strftime('%b %d, %H:%M') }}</span>
+        </a>
+      </li>
+      {% else %}
+      <li class="history-empty">No videos yet.</li>
+      {% endfor %}
+    </ul>
+  </section>
 
-      function addLog(text, cls) {
-        const line = document.createElement('div');
-        line.className = 'log-line ' + cls;
-        line.textContent = text;
-        log.appendChild(line);
-        log.scrollTop = log.scrollHeight;
+</div><!-- .page -->
+
+{% if active_video and active_video.status not in ('done', 'failed') %}
+<script>
+(function () {
+  const VIDEO_ID = {{ active_video.id }};
+
+  /* ── helpers ── */
+  function setState(nodeId, state) {
+    const el = document.getElementById(nodeId);
+    if (!el) return el;
+    el.classList.remove('is-pending', 'is-active', 'is-complete', 'is-error');
+    el.classList.add('is-' + state);
+
+    // Update aria-current
+    document.querySelectorAll('.pipeline-node[aria-current]')
+      .forEach(n => n.removeAttribute('aria-current'));
+    if (state === 'active') el.setAttribute('aria-current', 'step');
+
+    // Update icon
+    const icon = el.querySelector('.node-icon');
+    if (!icon) return el;
+    const icons = {
+      pending:  '○',
+      active:   '<span class="spinner"></span>',
+      complete: '✓',
+      error:    '✗',
+    };
+    icon.innerHTML = icons[state] || '○';
+
+    return el;
+  }
+
+  function setDetail(detailId, text) {
+    const el = document.getElementById(detailId);
+    if (el) el.textContent = text;
+  }
+
+  /* ── SSE ── */
+  let currentNode = 'n-queue';
+  const src = new EventSource(`/video/${VIDEO_ID}/stream`);
+
+  src.addEventListener('processing', () => {
+    setState('n-queue', 'complete');
+    setState('n-fetch', 'active');
+    currentNode = 'n-fetch';
+  });
+
+  src.addEventListener('fetching_transcript', () => {
+    setState('n-fetch', 'active');
+    currentNode = 'n-fetch';
+  });
+
+  src.addEventListener('transcript_ready', (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      const match = d.message && d.message.match(/\((\d+) chars\)/);
+      if (match) setDetail('n-fetch-detail', match[1] + ' chars fetched');
+    } catch (_) {}
+    setState('n-fetch', 'complete');
+    setState('n-summary', 'active');
+    currentNode = 'n-summary';
+
+    // Show summary panel + caret
+    const panel = document.getElementById('summary-panel');
+    const text  = document.getElementById('summary-text');
+    if (panel) panel.classList.add('visible');
+    if (text)  text.classList.add('streaming');
+  });
+
+  src.addEventListener('streaming', (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      const text = document.getElementById('summary-text');
+      if (text && d.chunk) {
+        // Append text node before the ::after caret pseudo
+        text.insertBefore(document.createTextNode(d.chunk), null);
       }
+    } catch (_) {}
+  });
 
-      const src = new EventSource(`/video/${videoId}/stream`);
+  src.addEventListener('done', () => {
+    src.close();
+    const text = document.getElementById('summary-text');
+    if (text) text.classList.remove('streaming');
+    setState('n-summary', 'complete');
+    setState('n-done', 'complete');
+    setDetail('n-done-detail', 'Completed ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+    refreshHistory();
+  });
 
-      src.addEventListener('processing', () => {
-        const cur = document.getElementById('log-current');
-        if (cur) cur.remove();
-        addLog('⏳ Job started, fetching transcript…', 'active');
-      });
+  function markError(msg) {
+    src.close();
+    setState(currentNode, 'error');
+    const panel = document.getElementById('error-panel');
+    if (panel) { panel.textContent = msg; panel.classList.add('visible'); }
+    const text = document.getElementById('summary-text');
+    if (text) text.classList.remove('streaming');
+    refreshHistory();
+  }
 
-      src.addEventListener('fetching_transcript', () => {
-        addLog('⏳ Fetching transcript…', 'active');
-      });
+  src.addEventListener('failed',    (e) => { try { markError(JSON.parse(e.data).message || 'Failed'); } catch(_) { markError('Failed'); } });
+  src.addEventListener('job_error', (e) => { try { markError(JSON.parse(e.data).message || 'Error');  } catch(_) { markError('Error');  } });
+  src.onerror = () => markError('Connection lost.');
 
-      src.addEventListener('transcript_ready', (e) => {
-        const d = JSON.parse(e.data);
-        addLog('✓ ' + d.message, 'ok');
-        addLog('⏳ Summarising with LLM…', 'active');
-      });
+  /* ── refresh history in place ── */
+  async function refreshHistory() {
+    try {
+      const res  = await fetch('/api/videos');
+      const data = await res.json();
+      const list = document.getElementById('history-list');
+      if (!list || !data.length) return;
 
-      src.addEventListener('streaming', (e) => {
-        const d = JSON.parse(e.data);
-        if (!summaryBox) {
-          const box = document.createElement('div');
-          box.className = 'summary-box';
-          box.id = 'summary-box';
-          box.innerHTML = '<h3>Summary</h3><p id="summary-text" class="streaming-cursor"></p>';
-          document.querySelector('.video-detail').appendChild(box);
-        }
-        const st = document.getElementById('summary-text');
-        if (st) st.textContent += d.chunk;
-      });
+      list.innerHTML = data.map(v => {
+        const active = v.id === VIDEO_ID ? ' is-active' : '';
+        const ts = new Date(v.created_at).toLocaleDateString('en', {month:'short', day:'numeric'})
+                 + ', ' + new Date(v.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        return `<li><a class="history-item${active}" href="/video/${v.id}">
+          <span class="hist-dot st-${v.status}" aria-hidden="true"></span>
+          <span class="hist-id">${esc(v.video_id)}</span>
+          <span class="hist-url">${esc(v.url)}</span>
+          <span class="hist-status st-${v.status}">${esc(v.status)}</span>
+          <span class="hist-time">${ts}</span>
+        </a></li>`;
+      }).join('');
+    } catch (_) {}
+  }
 
-      src.addEventListener('done', (e) => {
-        src.close();
-        addLog('✓ Done.', 'ok');
-        const st = document.getElementById('summary-text');
-        if (st) st.classList.remove('streaming-cursor');
-        // refresh sidebar badge without full reload
-        setTimeout(() => location.reload(), 800);
-      });
-
-      src.addEventListener('failed', (e) => {
-        src.close();
-        const d = JSON.parse(e.data);
-        addLog('✗ ' + (d.message || 'Unknown error'), 'err');
-        const st = document.getElementById('summary-text');
-        if (st) st.classList.remove('streaming-cursor');
-        setTimeout(() => location.reload(), 800);
-      });
-
-      src.onerror = () => {
-        src.close();
-        addLog('Connection lost.', 'err');
-      };
-    })();
-  </script>
-  {% endif %}
-
-  {% else %}
-  <div class="empty-state">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3a3a44" stroke-width="1.5">
-      <rect x="2" y="5" width="20" height="14" rx="2"/>
-      <polygon points="10,9 16,12 10,15" fill="#3a3a44" stroke="none"/>
-    </svg>
-    <p>Paste a YouTube link in the sidebar to get started.</p>
-  </div>
-  {% endif %}
-</main>
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+})();
+</script>
+{% endif %}
 
 </body>
 </html>
