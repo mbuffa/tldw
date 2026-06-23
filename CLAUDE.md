@@ -10,14 +10,15 @@ There is also a standalone shell script `tldw` at the repo root — a CLI versio
 
 ## Running the app
 
+Dependencies are managed with [uv](https://docs.astral.sh/uv/). `uv` must be installed (`brew install uv`).
+
 ```sh
-./run.sh          # creates .venv, installs deps, starts uvicorn on :8000 with --reload
+./run.sh          # syncs deps from uv.lock, starts uvicorn on :8000 with --reload
 ```
 
-Or manually after activating the venv:
+Or manually:
 ```sh
-source .venv/bin/activate
-uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload
 ```
 
 Set `OLLAMA_MODEL` to override the default (`gemma4`):
@@ -26,6 +27,15 @@ OLLAMA_MODEL=llama3 ./run.sh
 ```
 
 **Prerequisite:** Ollama must be running locally with the target model pulled (`ollama pull gemma4`).
+
+### Managing dependencies
+
+```sh
+uv add <package>      # add a new dependency (updates pyproject.toml + uv.lock)
+uv sync               # install/sync .venv from uv.lock
+```
+
+Commit both `pyproject.toml` and `uv.lock` — the lockfile ensures reproducible installs.
 
 ## Architecture
 
