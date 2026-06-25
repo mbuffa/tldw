@@ -19,6 +19,9 @@ PROMPT = PromptTemplate.from_template(
     "three sentences max, and you speak like caveman:\n\n{transcript}"
 )
 
+# Practical cap — avoids sending absurdly long transcripts to the LLM
+MAX_TRANSCRIPT_CHARS = 200_000
+
 
 def _is_youtube_host(host: str) -> bool:
     """Return True if *host* is youtube.com, a subdomain of it, or youtu.be."""
@@ -48,16 +51,19 @@ async def process_video(video_id: str) -> AsyncIterator[dict]:
         yield {"step": "error", "message": f"Failed to fetch transcript: {e}"}
         return
 
+    truncated = len(transcript) > MAX_TRANSCRIPT_CHARS
+    if truncated:
+        transcript = transcript[:MAX_TRANSCRIPT_CHARS]
+
     yield {
         "step": "transcript_ready",
-        "message": f"Transcript fetched ({len(transcript)} chars). Summarizing...",
+        "message": f"Transcript fetched ({len(transcript)} chars{' — truncated to fit context' if truncated else ''}). Summarizing...",
     }
 
     llm = OllamaLLM(
         model=os.getenv("OLLAMA_MODEL", "gemma4"),
         temperature=0.3,
-        reasoning=False,  # suppress thinking tokens (equivalent of --hidethinking)
-        num_ctx=8192,     # long transcripts need headroom
+        think=False,  # suppress thinking tokens (equivalent of --hidethinking)
     )
     chain = PROMPT | llm
 
