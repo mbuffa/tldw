@@ -1,0 +1,50 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      git_ref:
+        description: 'Git ref (branch/tag/commit) to deploy'
+        required: false
+        default: 'main'
+
+env:
+  DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-22.04
+    environment: production
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.git_ref || env.DEPLOY_SHA }}
+          fetch-depth: 0
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t localhost:32000/tldw:${{ env.DEPLOY_SHA }} -t localhost:32000/tldw:latest .
+          docker push localhost:32000/tldw:${{ env.DEPLOY_SHA }}
+          docker push localhost:32000/tldw:latest
+
+      - name: Trigger ArgoCD deployment
+        run: |
+          curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: token ${{ secrets.CD_TOKEN }}" \
+            "${{ vars.FORGE_URL }}/api/v1/repos/MakkuSoft/cd-tldw/actions/workflows/update-image.yaml/dispatches" \
+            -d "{\"ref\": \"main\", \"inputs\": {\"image_sha\": \"${{ env.DEPLOY_SHA }}\"}}"
+
+      - name: Deployment summary
+        run: |
+          echo "Deployed SHA: ${{ env.DEPLOY_SHA }}"
+          echo "Triggered by: ${{ github.actor }}"

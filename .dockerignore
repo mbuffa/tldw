@@ -1,0 +1,10 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.db
+.DS_Store
+# Standalone CLI script — not part of the web app
+tldw

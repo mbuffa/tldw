@@ -1,0 +1,47 @@
+name: Tag Deployed Commit
+
+# Triggered by ArgoCD via argocd-notifications after a successful sync.
+# ArgoCD should call the Gitea workflow_dispatch API:
+#
+#   POST $FORGE_URL/api/v1/repos/MakkuSoft/tldw/actions/workflows/tag-deployed.yml/dispatches
+#   Authorization: token <token-with-write-access>
+#   {"ref": "main", "inputs": {"image_sha": "<git-sha>", "env": "dev"}}
+#
+# The `deployed-<env>` tag is moved to the deployed commit, serving as a
+# debugging anchor ("what code is actually running on dev right now?").
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: 'Git SHA of the deployed image'
+        required: true
+      env:
+        description: 'Environment name (e.g. dev, prod)'
+        required: false
+        default: 'dev'
+
+jobs:
+  tag:
+    name: Move deployed tag
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.CD_TOKEN }}
+
+      - name: Move deployed tag
+        run: |
+          SHA="${{ inputs.image_sha }}"
+          ENV="${{ inputs.env }}"
+
+          git config user.name  "gitea-actions[bot]"
+          git config user.email "gitea-actions[bot]@noreply.local"
+
+          git tag -f "deployed-${ENV}" "$SHA"
+          git push origin "deployed-${ENV}" --force
+
+          echo "Moved deployed-${ENV} → $SHA"
