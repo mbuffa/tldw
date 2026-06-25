@@ -67,7 +67,10 @@ async def process_video(video_id: str, language: str = DEFAULT_LANGUAGE) -> Asyn
 
     yield {
         "step": "transcript_ready",
-        "message": f"Transcript fetched ({len(transcript)} chars{' — truncated to fit context' if truncated else ''}). Summarizing...",
+        "message": (
+            f"Transcript fetched ({len(transcript)} chars"
+            f"{' — truncated to fit context' if truncated else ''}). Summarizing..."
+        ),
     }
 
     llm = OllamaLLM(
