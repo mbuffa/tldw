@@ -11,7 +11,11 @@ from sse_starlette.sse import EventSourceResponse
 
 from app.database import get_db, init_db
 from app.models import Video
-from app.summarizer import extract_video_id
+from app.summarizer import (
+    SUPPORTED_LANGUAGES,
+    extract_video_id,
+    normalize_language,
+)
 from app.worker import get_queue, start_workers, subscribe, unsubscribe
 
 templates = Jinja2Templates(directory=str(pathlib.Path(__file__).parent / "templates"))
@@ -30,11 +34,19 @@ app = FastAPI(title="tl;dw", lifespan=lifespan)
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, db: Session = Depends(get_db)):
     videos = db.query(Video).order_by(Video.created_at.desc()).all()
-    return templates.TemplateResponse(request, "index.html", {"videos": videos})
+    return templates.TemplateResponse(
+        request, "index.html", {"videos": videos, "languages": sorted(SUPPORTED_LANGUAGES)}
+    )
 
 
 @app.post("/submit")
-async def submit(request: Request, url: str = Form(...), db: Session = Depends(get_db)):
+async def submit(
+    request: Request,
+    url: str = Form(...),
+    language: str = Form("French"),
+    db: Session = Depends(get_db),
+):
+    language = normalize_language(language)
     try:
         vid = extract_video_id(url)
     except ValueError:
@@ -42,11 +54,17 @@ async def submit(request: Request, url: str = Form(...), db: Session = Depends(g
         return templates.TemplateResponse(
             request,
             "index.html",
-            {"videos": videos, "error": "Only YouTube URLs are allowed.", "submitted_url": url},
+            {
+                "videos": videos,
+                "languages": sorted(SUPPORTED_LANGUAGES),
+                "error": "Only YouTube URLs are allowed.",
+                "submitted_url": url,
+                "submitted_language": language,
+            },
             status_code=400,
         )
 
-    video = Video(url=url, video_id=vid, status="queued")
+    video = Video(url=url, video_id=vid, status="queued", language=language)
     db.add(video)
     db.commit()
     db.refresh(video)
@@ -62,7 +80,9 @@ async def video_page(request: Request, video_id: int, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="Not found")
     videos = db.query(Video).order_by(Video.created_at.desc()).all()
     return templates.TemplateResponse(
-        request, "index.html", {"videos": videos, "active_video": video}
+        request,
+        "index.html",
+        {"videos": videos, "active_video": video, "languages": sorted(SUPPORTED_LANGUAGES)},
     )
 
 

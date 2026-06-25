@@ -49,7 +49,7 @@ async def _handle(video_id: int) -> None:
         _emit(video_id, {"step": "processing", "message": "Job started."})
 
         summary = None
-        async for event in process_video(video.video_id):
+        async for event in process_video(video.video_id, video.language):
             _emit(video_id, event)
             if event["step"] == "done":
                 summary = event["summary"]

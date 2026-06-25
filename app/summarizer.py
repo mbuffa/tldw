@@ -14,10 +14,19 @@ YOUTUBE_ID_RE = re.compile(
 # Hosts that are considered valid YouTube origins.
 _YOUTUBE_HOSTS = {"youtube.com", "youtu.be"}
 
+SUPPORTED_LANGUAGES = {"French", "English"}
+DEFAULT_LANGUAGE = "French"
+
 PROMPT = PromptTemplate.from_template(
-    "Summarize (in French) this transcript cleanly into key takeaways, "
+    "Summarize (in {language}) this transcript cleanly into key takeaways, "
     "three sentences max, and you speak like caveman:\n\n{transcript}"
 )
+
+
+def normalize_language(value: str) -> str:
+    """Return *value* if it is in SUPPORTED_LANGUAGES, else DEFAULT_LANGUAGE."""
+    return value if value in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
+
 
 # Practical cap — avoids sending absurdly long transcripts to the LLM
 MAX_TRANSCRIPT_CHARS = 200_000
@@ -41,7 +50,7 @@ def extract_video_id(url: str) -> str:
     return match.group(1)
 
 
-async def process_video(video_id: str) -> AsyncIterator[dict]:
+async def process_video(video_id: str, language: str = DEFAULT_LANGUAGE) -> AsyncIterator[dict]:
     yield {"step": "fetching_transcript", "message": "Fetching transcript..."}
 
     try:
@@ -69,7 +78,7 @@ async def process_video(video_id: str) -> AsyncIterator[dict]:
 
     summary_chunks: list[str] = []
     try:
-        async for chunk in chain.astream({"transcript": transcript}):
+        async for chunk in chain.astream({"transcript": transcript, "language": language}):
             summary_chunks.append(chunk)
             yield {"step": "streaming", "chunk": chunk}
     except Exception as e:

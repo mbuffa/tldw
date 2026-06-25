@@ -13,6 +13,7 @@ class Video(Base):
     url: Mapped[str] = mapped_column(String(500))
     video_id: Mapped[str] = mapped_column(String(50), index=True)
     status: Mapped[str] = mapped_column(String(20), default="queued")
+    language: Mapped[str] = mapped_column(String(20), default="French")
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

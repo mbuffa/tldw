@@ -124,6 +124,40 @@
 
     .url-input::placeholder { color: var(--ink-faint); }
 
+    .lang-select {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      cursor: pointer;
+      padding: 0 4px 0 0;
+      flex-shrink: 0;
+      appearance: none;
+      -webkit-appearance: none;
+      /* tiny caret drawn with a gradient arrow */
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0 center;
+      padding-right: 14px;
+      transition: color 0.15s;
+    }
+
+    .lang-select:hover,
+    .lang-select:focus { color: var(--ink); }
+
+    .lang-divider {
+      width: 1px;
+      height: 14px;
+      background: var(--line);
+      flex-shrink: 0;
+      margin: 0 14px;
+    }
+
     .submit-btn {
       background: none;
       border: none;
@@ -526,6 +560,16 @@
           spellcheck="false"
           autocomplete="off"
         />
+        <span class="lang-divider" aria-hidden="true"></span>
+        <label class="url-label" for="lang-select">Summary language</label>
+        <select id="lang-select" class="lang-select" name="language" aria-label="Summary language">
+          {% for lang in languages %}
+          <option value="{{ lang }}"
+            {% if lang == (submitted_language|default('French')) %}selected{% endif %}>
+            {{ lang }}
+          </option>
+          {% endfor %}
+        </select>
         <button class="submit-btn" type="submit" aria-label="Summarise">GO →</button>
       </div>
       {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
