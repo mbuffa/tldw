@@ -39,6 +39,7 @@ def _is_youtube_host(host: str) -> bool:
 
 
 def extract_video_id(url: str) -> str:
+    url = url.strip().replace("\\", "")
     parsed = urlparse(url)
     if parsed.scheme not in ("http", "https"):
         raise ValueError(f"Not a valid YouTube URL: {url}")
