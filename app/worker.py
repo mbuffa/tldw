@@ -65,12 +65,14 @@ async def _handle(video_id: int) -> None:
         video.completed_at = datetime.now(UTC)
         db.commit()
     except Exception as e:
-        db = SessionLocal()
-        video = db.get(Video, video_id)
-        if video:
-            video.status = "failed"
-            video.error = str(e)
-            db.commit()
+        try:
+            video = db.get(Video, video_id)
+            if video:
+                video.status = "failed"
+                video.error = str(e)
+                db.commit()
+        except Exception:
+            pass
         _emit(video_id, {"step": "failed", "message": str(e)})
     finally:
         db.close()
