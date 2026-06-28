@@ -10,6 +10,8 @@ This app was written using agentic coding. I did make all the technical choices 
 
 Also, support your favorite creators by watching their videos, of course. I just needed a summary for all the stocks and trading related videos that last 35 minutes for a couple of useful statements :)
 
+Also, if you don't see the difference between Caveman mode and some presidential announcements, this isn't software malfunction :)
+
 ## Install
 This is a self-hosted application, you'll need:
 * (optional) `asdf` and its python plugin
