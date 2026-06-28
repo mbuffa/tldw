@@ -8,7 +8,7 @@ tests import directly from app.llm and see the real factory unmasked.
 import pytest
 from langchain_ollama import OllamaLLM
 
-from app.llm import FakeLLM, _FAKE_OUTPUT, get_llm
+from app.llm import _FAKE_OUTPUT, FakeLLM, get_llm
 
 
 def test_get_llm_default_returns_ollama():

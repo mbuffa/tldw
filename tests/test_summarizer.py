@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from app.summarizer import (
     _is_youtube_host,
@@ -7,7 +8,6 @@ from app.summarizer import (
     normalize_language,
     process_video,
 )
-
 
 # ---------------------------------------------------------------------------
 # extract_video_id

@@ -43,6 +43,15 @@ uv sync               # install/sync .venv from uv.lock
 
 Commit both `pyproject.toml` and `uv.lock` — the lockfile ensures reproducible installs.
 
+### Static analysis
+
+```sh
+./check.sh        # runs ruff (lint) + ty (type-check); zero output = all clear
+uv run pytest     # run tests separately
+```
+
+`ty` is configured in `pyproject.toml` under `[tool.ty]` with default strictness, scoped to `app/` and `tests/`.
+
 ## Architecture
 
 The request lifecycle for a summary job:

@@ -1,7 +1,5 @@
-import pytest
 
 from app.models import Video
-
 
 # ---------------------------------------------------------------------------
 # GET /
@@ -123,8 +121,12 @@ async def test_api_videos_empty(client):
 
 
 async def test_api_videos_returns_list(client, db_session):
-    db_session.add(Video(url="https://youtu.be/aaaaabbbbbcc", video_id="aaaaabbbbbcc", status="done"))
-    db_session.add(Video(url="https://youtu.be/zzzzzyyyyyx", video_id="zzzzzyyyyyx", status="queued"))
+    db_session.add(
+        Video(url="https://youtu.be/aaaaabbbbbcc", video_id="aaaaabbbbbcc", status="done")
+    )
+    db_session.add(
+        Video(url="https://youtu.be/zzzzzyyyyyx", video_id="zzzzzyyyyyx", status="queued")
+    )
     db_session.commit()
 
     resp = await client.get("/api/videos")

@@ -1,7 +1,5 @@
 import asyncio
 
-import pytest
-
 from app.worker import _emit, _listeners, _progress, subscribe, unsubscribe
 
 

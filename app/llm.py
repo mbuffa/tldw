@@ -37,5 +37,5 @@ def get_llm() -> Runnable:
     return OllamaLLM(
         model=os.getenv("OLLAMA_MODEL", "gemma4"),
         temperature=0.3,
-        think=False,
+        reasoning=False,
     )

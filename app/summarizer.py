@@ -63,7 +63,9 @@ def extract_video_id(url: str) -> str:
     return match.group(1)
 
 
-async def process_video(video_id: str, language: str = DEFAULT_LANGUAGE, caveman: bool = False) -> AsyncIterator[dict]:
+async def process_video(
+    video_id: str, language: str = DEFAULT_LANGUAGE, caveman: bool = False
+) -> AsyncIterator[dict]:
     yield {"step": "fetching_transcript", "message": "Fetching transcript..."}
 
     try:
@@ -90,7 +92,9 @@ async def process_video(video_id: str, language: str = DEFAULT_LANGUAGE, caveman
 
     summary_chunks: list[str] = []
     try:
-        async for chunk in chain.astream({"transcript": transcript, "language": language, "style": CAVEMAN_CLAUSE if caveman else ""}):
+        style = CAVEMAN_CLAUSE if caveman else ""
+        payload = {"transcript": transcript, "language": language, "style": style}
+        async for chunk in chain.astream(payload):
             summary_chunks.append(chunk)
             yield {"step": "streaming", "chunk": chunk}
     except Exception as e:
