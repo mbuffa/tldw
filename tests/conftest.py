@@ -1,7 +1,6 @@
 import pytest
-from unittest.mock import AsyncMock, patch
-
-from fastapi.testclient import TestClient
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 from langchain_core.runnables import Runnable
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -72,17 +71,15 @@ def db_session(engine):
     s.close()
 
 
-@pytest.fixture
-def client(db_session):
+@pytest_asyncio.fixture
+async def client(db_session):
     def override_db():
         yield db_session
 
     app.dependency_overrides[get_db] = override_db
-
-    with patch("app.main.start_workers", new_callable=AsyncMock), patch("app.main.init_db"):
-        with TestClient(app) as c:
-            yield c
-
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
     app.dependency_overrides.clear()
 
 
