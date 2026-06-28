@@ -76,13 +76,13 @@ async def submit(
 
     await get_queue().put(video.id)
     if is_fetch:
-        return JSONResponse({"id": video.id, "video_id": video.video_id, "url": video.url})
-    return RedirectResponse(url=f"/video/{video.id}", status_code=303)
+        return JSONResponse({"slug": video.slug, "video_id": video.video_id, "url": video.url})
+    return RedirectResponse(url=f"/video/{video.slug}", status_code=303)
 
 
-@app.get("/video/{video_id}", response_class=HTMLResponse)
-async def video_page(request: Request, video_id: int, db: Session = Depends(get_db)):
-    video = db.get(Video, video_id)
+@app.get("/video/{slug}", response_class=HTMLResponse)
+async def video_page(request: Request, slug: str, db: Session = Depends(get_db)):
+    video = db.query(Video).filter(Video.slug == slug).first()
     if not video:
         raise HTTPException(status_code=404, detail="Not found")
     videos = db.query(Video).order_by(Video.created_at.desc()).all()
@@ -93,13 +93,14 @@ async def video_page(request: Request, video_id: int, db: Session = Depends(get_
     )
 
 
-@app.get("/video/{video_id}/stream")
-async def stream(video_id: int, db: Session = Depends(get_db)):
-    video = db.get(Video, video_id)
+@app.get("/video/{slug}/stream")
+async def stream(slug: str, db: Session = Depends(get_db)):
+    video = db.query(Video).filter(Video.slug == slug).first()
     if not video:
         raise HTTPException(status_code=404, detail="Not found")
 
-    q = subscribe(video_id)
+    vid_id = video.id
+    q = subscribe(vid_id)
 
     async def generator():
         try:
@@ -118,7 +119,7 @@ async def stream(video_id: int, db: Session = Depends(get_db)):
                 if event["step"] in ("done", "failed"):
                     break
         finally:
-            unsubscribe(video_id, q)
+            unsubscribe(vid_id, q)
 
     return EventSourceResponse(generator())
 
@@ -128,7 +129,7 @@ async def list_videos(db: Session = Depends(get_db)):
     videos = db.query(Video).order_by(Video.created_at.desc()).all()
     return [
         {
-            "id": v.id,
+            "slug": v.slug,
             "url": v.url,
             "video_id": v.video_id,
             "status": v.status,

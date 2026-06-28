@@ -762,8 +762,8 @@
     <ul class="history-list" id="history-list">
       {% for v in videos %}
       <li>
-        <a class="history-item {% if active_video and active_video.id == v.id %}is-active{% endif %}"
-           href="/video/{{ v.id }}">
+        <a class="history-item {% if active_video and active_video.slug == v.slug %}is-active{% endif %}"
+           href="/video/{{ v.slug }}">
           <span class="hist-dot st-{{ v.status }}" aria-hidden="true"></span>
           <span class="hist-id">{{ v.video_id }}</span>
           <span class="hist-url">{{ v.url }}</span>
@@ -862,11 +862,11 @@
       if (!list || !data.length) return;
 
       list.innerHTML = data.map(v => {
-        const active = v.id === currentVideoId ? ' is-active' : '';
+        const active = v.slug === currentVideoId ? ' is-active' : '';
         const d  = new Date(v.created_at);
         const ts = d.toLocaleDateString('en', { month: 'short', day: 'numeric' })
                  + ', ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return `<li><a class="history-item${active}" href="/video/${v.id}">
+        return `<li><a class="history-item${active}" href="/video/${v.slug}">
           <span class="hist-dot st-${esc(v.status)}" aria-hidden="true"></span>
           <span class="hist-id">${esc(v.video_id)}</span>
           <span class="hist-url">${esc(v.url)}</span>
@@ -1011,17 +1011,17 @@
       return;
     }
 
-    history.pushState({}, '', '/video/' + data.id);
+    history.pushState({}, '', '/video/' + data.slug);
     setDetail('n-queue-detail', data.video_id);
-    connectStream(data.id);
+    connectStream(data.slug);
     refreshHistory();
   });
 
   /* ── auto-connect on page load if job is in-flight ── */
   {% if active_video and active_video.status not in ('done', 'failed') %}
-  connectStream({{ active_video.id }});
+  connectStream('{{ active_video.slug }}');
   {% elif active_video %}
-  currentVideoId = {{ active_video.id }};
+  currentVideoId = '{{ active_video.slug }}';
   {% endif %}
 })();
 </script>

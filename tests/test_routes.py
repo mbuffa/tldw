@@ -74,7 +74,7 @@ async def test_submit_fetch_header_returns_json(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["video_id"] == "dQw4w9WgXcQ"
-    assert "id" in body
+    assert "slug" in body
 
 
 async def test_submit_caveman_flag_stored(client, db_session):
@@ -97,14 +97,15 @@ async def test_video_page_exists(client, db_session):
     v = Video(url="https://youtu.be/dQw4w9WgXcQ", video_id="dQw4w9WgXcQ", status="done")
     db_session.add(v)
     db_session.commit()
+    db_session.refresh(v)
 
-    resp = await client.get(f"/video/{v.id}")
+    resp = await client.get(f"/video/{v.slug}")
     assert resp.status_code == 200
     assert "dQw4w9WgXcQ" in resp.text
 
 
 async def test_video_page_not_found(client):
-    resp = await client.get("/video/9999")
+    resp = await client.get("/video/no-such-slug")
     assert resp.status_code == 404
 
 
@@ -134,3 +135,4 @@ async def test_api_videos_returns_list(client, db_session):
     assert len(data) == 2
     ids = {v["video_id"] for v in data}
     assert ids == {"aaaaabbbbbcc", "zzzzzyyyyyx"}
+    assert all("slug" in v for v in data)
