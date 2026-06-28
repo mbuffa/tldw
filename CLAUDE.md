@@ -13,24 +13,19 @@ There is also a standalone shell script `tldw` at the repo root — a CLI versio
 Dependencies are managed with [uv](https://docs.astral.sh/uv/). `uv` must be installed (`brew install uv`).
 
 ```sh
-./run.sh          # syncs deps from uv.lock, starts uvicorn on :8000 with --reload
-```
-
-Or manually:
-```sh
-uv run uvicorn app.main:app --reload
+make run          # starts uvicorn on :8000 with --reload
 ```
 
 Set `OLLAMA_MODEL` to override the default (`gemma4`):
 ```sh
-OLLAMA_MODEL=llama3 ./run.sh
+OLLAMA_MODEL=llama3 make run
 ```
 
 **Prerequisite:** Ollama must be running locally with the target model pulled (`ollama pull gemma4`).
 
 **Offline / demo mode** — run the app with no Ollama required by selecting the built-in fake backend:
 ```sh
-TLDW_LLM_BACKEND=fake ./run.sh
+TLDW_LLM_BACKEND=fake make run
 ```
 This streams a deterministic canned summary instead of calling Ollama. Default is `ollama`.
 
@@ -46,11 +41,12 @@ Commit both `pyproject.toml` and `uv.lock` — the lockfile ensures reproducible
 ### Static analysis
 
 ```sh
-./check.sh        # runs ruff (lint) + ty (type-check); zero output = all clear
-uv run pytest     # run tests separately
+make check        # ruff (lint) + ty (type-check)
+make test         # run the test suite
+make format       # auto-format with ruff
 ```
 
-`ty` is configured in `pyproject.toml` under `[tool.ty]` with default strictness, scoped to `app/` and `tests/`.
+Run `make` or `make help` to see all available targets. `ty` is configured in `pyproject.toml` under `[tool.ty]`, scoped to `app/` and `tests/`.
 
 ## Architecture
 
