@@ -1,2 +1,27 @@
 #!/bin/sh
-ollama run gemma4 --hidethinking "Summarize (in French) this transcript cleanly into key takeaways, three sentences max, and you speak like caveman:\n\n$(python3 -m youtube_transcript_api $1 --format text --languages en fr)" 2>/dev/null
+set -e
+
+if [ -z "$1" ]; then
+	echo "Usage: ./tldw <youtube-video-id>" >&2
+	exit 1
+fi
+
+# Resolve the repo dir so `uv run` finds this project's venv regardless of cwd.
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+# The youtube_transcript_api CLI always exits 0, even on error. Call it via Python
+# so we get a real non-zero exit code when the transcript can't be fetched.
+transcript=$(uv run --project "$script_dir" python - "$1" <<'EOF'
+import sys
+from youtube_transcript_api import YouTubeTranscriptApi
+try:
+    fetched = YouTubeTranscriptApi().fetch(sys.argv[1], languages=["en", "fr"])
+    print(" ".join(s.text for s in fetched))
+except Exception as e:
+    print(f"Error: {e}", file=sys.stderr)
+    sys.exit(1)
+EOF
+)
+
+ollama run "${OLLAMA_MODEL:-gemma4}" --hidethinking \
+	"Summarize (in French) this transcript cleanly into key takeaways, three sentences max, and you speak like caveman:\n\n$transcript"
