@@ -1,8 +1,9 @@
-# Too Long; Didn't Watch
-
+# Too Long; Didn't Watch (aka. Abrege-Frere.js)
 A Youtube video summarizer that leverages your Ollama server to save you 30 minutes of anxiety, slashed ad breaks or infinite ego to extract the essential information.
 
 And it supports Caveman.
+
+![Example of TL;DW](assets/screenshot.png)
 
 ## Disclaimer
 This app was written using agentic coding. I did make all the technical choices in here, including using LangChain and Astral's modern Python tooling, but I needed an app quickly. So there might be ugly spots here and there yet.
@@ -20,6 +21,22 @@ make run
 make test
 ```
 
+## Deployment
+TLDW is and can be easily hosted on Kubernetes.
+Here are the environment variables that you can set:
+```
+OLLAMA_MODEL=gemma4:e2b
+OLLAMA_HOST=http://127.0.0.1:11434
+```
+
+## Picking the right model for your hardware
+TLDW uses `gemma4` by default because it gives reasonably good results on an Apple M4 Pro with 24GB of ram.
+
+On more restrictive hardware (such as a Thinkcentre with Ryzen CPU and Vega GPU, 8GB of ram), `qwen2.5:0.5b` runs really fast, has the advantage of being able to sit into 512MB of VRAM, but its summaries are deceptive to the point of not being useful.
+
+I found `gemma4:e2b` to be reasonably good on a toaster :)
+
+## PoC
 There's also a simple PoC shell script you can use to tinker with the prompt or to have a good laugh:
 ```sh
 ./tldw hHGPsHTHaLA
