@@ -17,9 +17,11 @@ _YOUTUBE_HOSTS = {"youtube.com", "youtu.be"}
 SUPPORTED_LANGUAGES = {"French", "English"}
 DEFAULT_LANGUAGE = "French"
 
+CAVEMAN_CLAUSE = ", and you speak like caveman"
+
 PROMPT = PromptTemplate.from_template(
     "Summarize (in {language}) this transcript cleanly into key takeaways, "
-    "three sentences max, and you speak like caveman:\n\n{transcript}"
+    "three sentences max{style}:\n\n{transcript}"
 )
 
 
@@ -51,7 +53,7 @@ def extract_video_id(url: str) -> str:
     return match.group(1)
 
 
-async def process_video(video_id: str, language: str = DEFAULT_LANGUAGE) -> AsyncIterator[dict]:
+async def process_video(video_id: str, language: str = DEFAULT_LANGUAGE, caveman: bool = False) -> AsyncIterator[dict]:
     yield {"step": "fetching_transcript", "message": "Fetching transcript..."}
 
     try:
@@ -82,7 +84,7 @@ async def process_video(video_id: str, language: str = DEFAULT_LANGUAGE) -> Asyn
 
     summary_chunks: list[str] = []
     try:
-        async for chunk in chain.astream({"transcript": transcript, "language": language}):
+        async for chunk in chain.astream({"transcript": transcript, "language": language, "style": CAVEMAN_CLAUSE if caveman else ""}):
             summary_chunks.append(chunk)
             yield {"step": "streaming", "chunk": chunk}
     except Exception as e:

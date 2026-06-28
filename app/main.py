@@ -44,6 +44,7 @@ async def submit(
     request: Request,
     url: str = Form(...),
     language: str = Form("French"),
+    caveman: bool = Form(False),
     db: Session = Depends(get_db),
 ):
     language = normalize_language(language)
@@ -60,11 +61,12 @@ async def submit(
                 "error": "Only YouTube URLs are allowed.",
                 "submitted_url": url,
                 "submitted_language": language,
+                "submitted_caveman": caveman,
             },
             status_code=400,
         )
 
-    video = Video(url=url, video_id=vid, status="queued", language=language)
+    video = Video(url=url, video_id=vid, status="queued", language=language, caveman=caveman)
     db.add(video)
     db.commit()
     db.refresh(video)
