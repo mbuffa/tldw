@@ -23,4 +23,5 @@ def get_db():
 
 def init_db():
     from app.models import Video  # noqa: F401
+
     Base.metadata.create_all(bind=engine)

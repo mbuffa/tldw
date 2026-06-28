@@ -7,9 +7,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 
 from app.llm import get_llm
 
-YOUTUBE_ID_RE = re.compile(
-    r"(?:v=|youtu\.be/|embed/|shorts/)([a-zA-Z0-9_-]{11})"
-)
+YOUTUBE_ID_RE = re.compile(r"(?:v=|youtu\.be/|embed/|shorts/)([a-zA-Z0-9_-]{11})")
 
 # Hosts that are considered valid YouTube origins.
 _YOUTUBE_HOSTS = {"youtube.com", "youtu.be"}
