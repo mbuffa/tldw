@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
 
-from app.database import get_db, init_db
+from app.database import get_db
 from app.models import Video
 from app.summarizer import (
     SUPPORTED_LANGUAGES,
@@ -23,12 +23,16 @@ templates = Jinja2Templates(directory=str(pathlib.Path(__file__).parent / "templ
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
     await start_workers()
     yield
 
 
 app = FastAPI(title="tl;dw", lifespan=lifespan)
+
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
 
 
 @app.get("/", response_class=HTMLResponse)

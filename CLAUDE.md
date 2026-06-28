@@ -40,7 +40,7 @@ Commit both `pyproject.toml` and `uv.lock` — the lockfile ensures reproducible
 
 ### Database migrations
 
-Migrations are managed with **Alembic**. Versioned files live in `alembic/versions/` and are applied automatically when the app starts (via `init_db()` in `app/database.py`). To work with them manually:
+Migrations are managed with **Alembic**. Versioned files live in `alembic/versions/`. In production they are applied by a dedicated Kubernetes PreSync Job in the `cd-tldw` GitOps repo — the app no longer migrates on startup. To work with them locally:
 
 ```sh
 make migrate                      # apply all pending migrations (alembic upgrade head)
@@ -76,7 +76,7 @@ Key files:
 - `app/summarizer.py` — transcript fetching (`youtube-transcript-api`) + streaming LLM
 - `app/llm.py` — `get_llm()` factory; env-selects `OllamaLLM` (default) or `FakeLLM` (`TLDW_LLM_BACKEND=fake`)
 - `app/models.py` — `Video` SQLAlchemy model (`id`, `url`, `video_id`, `slug`, `status`, `summary`, `error`, `created_at`, `completed_at`)
-- `app/database.py` — SQLite engine (`tldw.db`), session factory, `init_db()` (runs `alembic upgrade head`)
+- `app/database.py` — SQLite engine (`tldw.db`), session factory
 - `alembic/` — migration environment; `alembic/versions/` holds the ordered migration files
 - `app/templates/index.html` — single Jinja2 template; sidebar + detail panel; SSE JS client inline
 
