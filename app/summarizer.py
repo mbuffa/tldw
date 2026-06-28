@@ -17,11 +17,21 @@ _YOUTUBE_HOSTS = {"youtube.com", "youtu.be"}
 SUPPORTED_LANGUAGES = {"French", "English"}
 DEFAULT_LANGUAGE = "French"
 
-CAVEMAN_CLAUSE = ", and you speak like caveman"
+CAVEMAN_CLAUSE = (
+    "- Write the bullet points in caveman speech (broken, simple words), "
+    "as the single summary — do NOT also provide a normal version.\n"
+)
 
 PROMPT = PromptTemplate.from_template(
-    "Summarize (in {language}) this transcript cleanly into key takeaways, "
-    "three sentences max{style}:\n\n{transcript}"
+    "Summarize the transcript below in {language} as exactly three short "
+    "bullet points capturing the key takeaways.\n\n"
+    "Rules:\n"
+    "- Output ONLY the three bullet points, nothing else.\n"
+    "- No preamble, title, heading, or closing remark.\n"
+    "- Produce the summary ONCE. Never add a second version, a normal "
+    "rendering, or a translation.\n"
+    "{style}"
+    "\nTranscript:\n{transcript}"
 )
 
 
