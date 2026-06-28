@@ -38,6 +38,18 @@ uv sync               # install/sync .venv from uv.lock
 
 Commit both `pyproject.toml` and `uv.lock` — the lockfile ensures reproducible installs.
 
+### Database migrations
+
+Migrations are managed with **Alembic**. Versioned files live in `alembic/versions/` and are applied automatically when the app starts (via `init_db()` in `app/database.py`). To work with them manually:
+
+```sh
+make migrate                      # apply all pending migrations (alembic upgrade head)
+make revision m="describe change" # auto-generate a new migration from model changes
+make downgrade                    # roll back one migration
+```
+
+When adding a new column or table, update `app/models.py` first, then run `make revision m="…"` to generate the migration file, review it, and commit both together.
+
 ### Static analysis
 
 ```sh
@@ -63,8 +75,9 @@ Key files:
 - `app/worker.py` — async job queue, pub/sub event fan-out
 - `app/summarizer.py` — transcript fetching (`youtube-transcript-api`) + streaming LLM
 - `app/llm.py` — `get_llm()` factory; env-selects `OllamaLLM` (default) or `FakeLLM` (`TLDW_LLM_BACKEND=fake`)
-- `app/models.py` — `Video` SQLAlchemy model (`id`, `url`, `video_id`, `status`, `summary`, `error`, `created_at`, `completed_at`)
-- `app/database.py` — SQLite engine (`tldw.db`), session factory, `init_db()`
+- `app/models.py` — `Video` SQLAlchemy model (`id`, `url`, `video_id`, `slug`, `status`, `summary`, `error`, `created_at`, `completed_at`)
+- `app/database.py` — SQLite engine (`tldw.db`), session factory, `init_db()` (runs `alembic upgrade head`)
+- `alembic/` — migration environment; `alembic/versions/` holds the ordered migration files
 - `app/templates/index.html` — single Jinja2 template; sidebar + detail panel; SSE JS client inline
 
 ## SSE event names

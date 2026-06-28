@@ -1,12 +1,16 @@
 import os
+import pathlib
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./tldw.db")
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Repo root — used to locate alembic.ini regardless of the working directory.
+_BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
 
 
 class Base(DeclarativeBase):
@@ -21,31 +25,12 @@ def get_db():
         db.close()
 
 
-def init_db():
-    from app.models import Video, generate_slug  # noqa: F401
+def init_db() -> None:
+    """Apply all pending Alembic migrations to the database."""
+    from alembic.config import Config
 
-    Base.metadata.create_all(bind=engine)
+    from alembic import command
 
-    # Migrate existing databases that predate the slug column.
-    col_names = {c["name"] for c in inspect(engine).get_columns("videos")}
-    if "slug" not in col_names:
-        with engine.connect() as conn:
-            conn.execute(text("ALTER TABLE videos ADD COLUMN slug VARCHAR(16)"))
-            conn.commit()
-
-        # Backfill slugs for existing rows.
-        db = SessionLocal()
-        try:
-            for video in db.query(Video).filter(Video.slug == None).all():  # noqa: E711
-                video.slug = generate_slug()
-            db.commit()
-        finally:
-            db.close()
-
-        with engine.connect() as conn:
-            conn.execute(
-                text(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_videos_slug ON videos(slug)"
-                )
-            )
-            conn.commit()
+    cfg = Config(str(_BASE_DIR / "alembic.ini"))
+    cfg.set_main_option("script_location", str(_BASE_DIR / "alembic"))
+    command.upgrade(cfg, "head")

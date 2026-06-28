@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help sync run check lint type format test
+.PHONY: help sync run check lint type format test migrate revision downgrade
 
 help:  ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -24,3 +24,12 @@ format:  ## Auto-format with ruff
 
 test:  ## Run the test suite
 	uv run pytest
+
+migrate:  ## Apply all pending migrations (alembic upgrade head)
+	uv run alembic upgrade head
+
+revision:  ## Generate a new migration (usage: make revision m="describe change")
+	uv run alembic revision --autogenerate -m "$(m)"
+
+downgrade:  ## Roll back one migration (alembic downgrade -1)
+	uv run alembic downgrade -1
