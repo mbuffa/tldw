@@ -30,6 +30,10 @@ COPY --from=builder /app/.venv /app/.venv
 # App source (includes templates at app/templates/)
 COPY app ./app
 
+# Alembic migration files (init_db() needs these to apply schema changes on startup)
+COPY alembic.ini alembic.ini
+COPY alembic ./alembic
+
 ENV PATH="/app/.venv/bin:$PATH" \
     DATABASE_URL="sqlite:////data/tldw.db"
 
