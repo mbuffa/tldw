@@ -1,11 +1,11 @@
-import os
 import re
 from collections.abc import AsyncIterator
 from urllib.parse import urlparse
 
 from langchain_core.prompts import PromptTemplate
-from langchain_ollama import OllamaLLM
 from youtube_transcript_api import YouTubeTranscriptApi
+
+from app.llm import get_llm
 
 YOUTUBE_ID_RE = re.compile(
     r"(?:v=|youtu\.be/|embed/|shorts/)([a-zA-Z0-9_-]{11})"
@@ -85,11 +85,7 @@ async def process_video(video_id: str, language: str = DEFAULT_LANGUAGE, caveman
         ),
     }
 
-    llm = OllamaLLM(
-        model=os.getenv("OLLAMA_MODEL", "gemma4"),
-        temperature=0.3,
-        think=False,  # suppress thinking tokens (equivalent of --hidethinking)
-    )
+    llm = get_llm()
     chain = PROMPT | llm
 
     summary_chunks: list[str] = []

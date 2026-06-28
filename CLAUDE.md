@@ -28,6 +28,12 @@ OLLAMA_MODEL=llama3 ./run.sh
 
 **Prerequisite:** Ollama must be running locally with the target model pulled (`ollama pull gemma4`).
 
+**Offline / demo mode** — run the app with no Ollama required by selecting the built-in fake backend:
+```sh
+TLDW_LLM_BACKEND=fake ./run.sh
+```
+This streams a deterministic canned summary instead of calling Ollama. Default is `ollama`.
+
 ### Managing dependencies
 
 ```sh
@@ -50,7 +56,8 @@ The request lifecycle for a summary job:
 Key files:
 - `app/main.py` — FastAPI routes and SSE endpoint
 - `app/worker.py` — async job queue, pub/sub event fan-out
-- `app/summarizer.py` — transcript fetching (`youtube-transcript-api`) + streaming LLM via `langchain-ollama`
+- `app/summarizer.py` — transcript fetching (`youtube-transcript-api`) + streaming LLM
+- `app/llm.py` — `get_llm()` factory; env-selects `OllamaLLM` (default) or `FakeLLM` (`TLDW_LLM_BACKEND=fake`)
 - `app/models.py` — `Video` SQLAlchemy model (`id`, `url`, `video_id`, `status`, `summary`, `error`, `created_at`, `completed_at`)
 - `app/database.py` — SQLite engine (`tldw.db`), session factory, `init_db()`
 - `app/templates/index.html` — single Jinja2 template; sidebar + detail panel; SSE JS client inline
