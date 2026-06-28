@@ -4,7 +4,7 @@ import pathlib
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sse_starlette.sse import EventSourceResponse
@@ -47,10 +47,13 @@ async def submit(
     caveman: bool = Form(False),
     db: Session = Depends(get_db),
 ):
+    is_fetch = request.headers.get("x-requested-with") == "fetch"
     language = normalize_language(language)
     try:
         vid = extract_video_id(url)
     except ValueError:
+        if is_fetch:
+            return JSONResponse({"error": "Only YouTube URLs are allowed."}, status_code=400)
         videos = db.query(Video).order_by(Video.created_at.desc()).all()
         return templates.TemplateResponse(
             request,
@@ -72,6 +75,8 @@ async def submit(
     db.refresh(video)
 
     await get_queue().put(video.id)
+    if is_fetch:
+        return JSONResponse({"id": video.id, "video_id": video.video_id, "url": video.url})
     return RedirectResponse(url=f"/video/{video.id}", status_code=303)
 
 

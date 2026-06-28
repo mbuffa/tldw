@@ -635,8 +635,7 @@
   <section class="pipeline-section" id="pipeline-section">
     <div class="section-label">Processing</div>
 
-    {% if active_video %}
-    {% set status = active_video.status %}
+    {% set status = active_video.status if active_video else '' %}
 
     <ul class="pipeline" role="list" aria-label="Processing steps">
 
@@ -661,7 +660,7 @@
             </span>
           </div>
           <div class="node-detail" id="n-queue-detail">
-            <span>{{ active_video.video_id }}</span>
+            {% if active_video %}<span>{{ active_video.video_id }}</span>{% endif %}
           </div>
         </div>
       </li>
@@ -712,7 +711,11 @@
           <div class="summary-panel visible" id="summary-panel">
             <p class="summary-text has-content" id="summary-text" aria-live="polite">{{ active_video.summary }}</p>
           </div>
+          <div class="error-panel" id="error-panel"></div>
           {% elif status == 'failed' %}
+          <div class="summary-panel" id="summary-panel">
+            <p class="summary-text" id="summary-text" aria-live="polite"></p>
+          </div>
           <div class="error-panel visible" id="error-panel">{{ active_video.error }}</div>
           {% else %}
           <div class="summary-panel" id="summary-panel">
@@ -745,23 +748,8 @@
 
     </ul>
 
-    {% else %}
-    <!-- idle preview: all steps pending -->
-    <ul class="pipeline" role="list" aria-label="Processing steps (idle)">
-      {% for label in ['Submitted', 'Fetching transcript', 'Summarising', 'Done'] %}
-      <li class="pipeline-node is-pending">
-        {% if not loop.last %}<div class="node-spine"></div>{% endif %}
-        <div class="node-num" aria-hidden="true">0{{ loop.index }}</div>
-        <div class="node-body">
-          <div class="node-header">
-            <span class="node-label">{{ label }}</span>
-          </div>
-        </div>
-      </li>
-      {% endfor %}
-    </ul>
-    <p class="pipeline-idle">Submit a URL above to start.</p>
-    {% endif %}
+    <p class="pipeline-idle" id="pipeline-idle"
+       {% if active_video %}style="display:none"{% endif %}>Submit a URL above to start.</p>
 
   </section>
 
@@ -791,10 +779,12 @@
 
 </div><!-- .page -->
 
-{% if active_video and active_video.status not in ('done', 'failed') %}
 <script>
 (function () {
-  const VIDEO_ID = {{ active_video.id }};
+  /* ── state ── */
+  let currentNode   = 'n-queue';
+  let currentVideoId = null;
+  let src           = null;   // active EventSource
 
   /* ── helpers ── */
   function setState(nodeId, state) {
@@ -803,16 +793,21 @@
     el.classList.remove('is-pending', 'is-active', 'is-complete', 'is-error');
     el.classList.add('is-' + state);
 
-    // aria-current: only one step at a time
     document.querySelectorAll('.pipeline-node[aria-current]')
       .forEach(n => n.removeAttribute('aria-current'));
     if (state === 'active') el.setAttribute('aria-current', 'step');
 
-    // update the glyph
     const glyph = el.querySelector('.node-glyph');
     if (glyph) {
       const glyphs = { pending: '', active: '⟳', complete: '✓', error: '✗' };
       glyph.textContent = glyphs[state] || '';
+    }
+
+    // keep label text in sync for the submit node
+    if (nodeId === 'n-queue') {
+      const label = el.querySelector('.node-label');
+      if (label && state === 'active') label.textContent = 'Waiting in queue';
+      if (label && state === 'complete') label.textContent = 'Submitted';
     }
 
     return el;
@@ -823,81 +818,40 @@
     if (el) el.textContent = text;
   }
 
-  /* ── SSE ── */
-  let currentNode = 'n-queue';
-  const src = new EventSource(`/video/${VIDEO_ID}/stream`);
+  /* ── reset pipeline to its initial "new job starting" state ── */
+  function resetPipeline() {
+    // nodes
+    setState('n-queue',   'active');
+    setState('n-fetch',   'pending');
+    setState('n-summary', 'pending');
+    setState('n-done',    'pending');
+    currentNode = 'n-queue';
 
-  src.addEventListener('processing', () => {
-    setState('n-queue', 'complete');
-    setState('n-fetch', 'active');
-    currentNode = 'n-fetch';
-  });
+    // details
+    ['n-queue-detail', 'n-fetch-detail', 'n-summary-detail', 'n-done-detail']
+      .forEach(id => setDetail(id, ''));
 
-  src.addEventListener('fetching_transcript', () => {
-    setState('n-fetch', 'active');
-    currentNode = 'n-fetch';
-  });
-
-  src.addEventListener('transcript_ready', (e) => {
-    try {
-      const d = JSON.parse(e.data);
-      const m = d.message && d.message.match(/\((\d+)\s*chars\)/);
-      if (m) setDetail('n-fetch-detail', m[1] + ' chars fetched');
-    } catch (_) {}
-    setState('n-fetch', 'complete');
-    setState('n-summary', 'active');
-    currentNode = 'n-summary';
-
-    // reveal summary panel + streaming caret
+    // summary panel
     const panel = document.getElementById('summary-panel');
     const text  = document.getElementById('summary-text');
-    if (panel) panel.classList.add('visible');
-    if (text)  text.classList.add('streaming');
-  });
+    if (panel) panel.classList.remove('visible');
+    if (text)  {
+      text.classList.remove('streaming', 'has-content');
+      text.textContent = '';
+    }
 
-  src.addEventListener('streaming', (e) => {
-    try {
-      const d = JSON.parse(e.data);
-      const text = document.getElementById('summary-text');
-      if (text && d.chunk) {
-        text.insertBefore(document.createTextNode(d.chunk), null);
-        // add drop-cap class once we have content
-        if (!text.classList.contains('has-content') && text.textContent.trim().length > 0) {
-          text.classList.add('has-content');
-        }
-      }
-    } catch (_) {}
-  });
+    // error panel
+    const errPanel = document.getElementById('error-panel');
+    if (errPanel) { errPanel.textContent = ''; errPanel.classList.remove('visible'); }
 
-  src.addEventListener('done', () => {
-    src.close();
-    const text = document.getElementById('summary-text');
-    if (text) text.classList.remove('streaming');
-    setState('n-summary', 'complete');
-    setState('n-done', 'complete');
-    setDetail('n-done-detail',
-      'Completed ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    );
-    refreshHistory();
-  });
+    // hide idle hint
+    const idle = document.getElementById('pipeline-idle');
+    if (idle) idle.style.display = 'none';
 
-  function markError(msg) {
-    src.close();
-    setState(currentNode, 'error');
-    const panel = document.getElementById('error-panel');
-    if (panel) { panel.textContent = msg; panel.classList.add('visible'); }
-    const text = document.getElementById('summary-text');
-    if (text) text.classList.remove('streaming');
-    refreshHistory();
+    // reset summarising label in case it was set to "Failed"
+    const summaryLabel = document.querySelector('#n-summary .node-label');
+    if (summaryLabel) summaryLabel.textContent = 'Summarising';
   }
-
-  src.addEventListener('failed',    (e) => {
-    try { markError(JSON.parse(e.data).message || 'Failed'); } catch (_) { markError('Failed'); }
-  });
-  src.addEventListener('job_error', (e) => {
-    try { markError(JSON.parse(e.data).message || 'Error');  } catch (_) { markError('Error');  }
-  });
-  src.onerror = () => markError('Connection lost.');
 
   /* ── refresh history in place ── */
   async function refreshHistory() {
@@ -908,8 +862,8 @@
       if (!list || !data.length) return;
 
       list.innerHTML = data.map(v => {
-        const active = v.id === VIDEO_ID ? ' is-active' : '';
-        const d = new Date(v.created_at);
+        const active = v.id === currentVideoId ? ' is-active' : '';
+        const d  = new Date(v.created_at);
         const ts = d.toLocaleDateString('en', { month: 'short', day: 'numeric' })
                  + ', ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         return `<li><a class="history-item${active}" href="/video/${v.id}">
@@ -928,9 +882,149 @@
       .replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+  /* ── open an SSE stream for a video ── */
+  function connectStream(videoId) {
+    if (src) { src.close(); src = null; }
+    currentVideoId = videoId;
+
+    src = new EventSource('/video/' + videoId + '/stream');
+
+    src.addEventListener('processing', () => {
+      setState('n-queue', 'complete');
+      setState('n-fetch', 'active');
+      currentNode = 'n-fetch';
+    });
+
+    src.addEventListener('fetching_transcript', () => {
+      setState('n-fetch', 'active');
+      currentNode = 'n-fetch';
+    });
+
+    src.addEventListener('transcript_ready', (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        const m = d.message && d.message.match(/\((\d+)\s*chars\)/);
+        if (m) setDetail('n-fetch-detail', m[1] + ' chars fetched');
+      } catch (_) {}
+      setState('n-fetch', 'complete');
+      setState('n-summary', 'active');
+      currentNode = 'n-summary';
+
+      const panel = document.getElementById('summary-panel');
+      const text  = document.getElementById('summary-text');
+      if (panel) panel.classList.add('visible');
+      if (text)  text.classList.add('streaming');
+    });
+
+    src.addEventListener('streaming', (e) => {
+      try {
+        const d    = JSON.parse(e.data);
+        const text = document.getElementById('summary-text');
+        if (text && d.chunk) {
+          text.insertBefore(document.createTextNode(d.chunk), null);
+          if (!text.classList.contains('has-content') && text.textContent.trim().length > 0) {
+            text.classList.add('has-content');
+          }
+        }
+      } catch (_) {}
+    });
+
+    src.addEventListener('done', () => {
+      src.close(); src = null;
+      const text = document.getElementById('summary-text');
+      if (text) text.classList.remove('streaming');
+      setState('n-summary', 'complete');
+      setState('n-done', 'complete');
+      setDetail('n-done-detail',
+        'Completed ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      );
+      refreshHistory();
+    });
+
+    function markError(msg) {
+      if (src) { src.close(); src = null; }
+      setState(currentNode, 'error');
+      // keep label readable when the error lands on the summary step
+      if (currentNode === 'n-summary') {
+        const label = document.querySelector('#n-summary .node-label');
+        if (label) label.textContent = 'Failed';
+      }
+      const panel = document.getElementById('error-panel');
+      if (panel) { panel.textContent = msg; panel.classList.add('visible'); }
+      const text = document.getElementById('summary-text');
+      if (text) text.classList.remove('streaming');
+      refreshHistory();
+    }
+
+    src.addEventListener('failed',    (e) => {
+      try { markError(JSON.parse(e.data).message || 'Failed'); } catch (_) { markError('Failed'); }
+    });
+    src.addEventListener('job_error', (e) => {
+      try { markError(JSON.parse(e.data).message || 'Error');  } catch (_) { markError('Error');  }
+    });
+    src.onerror = () => markError('Connection lost.');
+  }
+
+  /* ── in-page form submission ── */
+  const form     = document.querySelector('form[action="/submit"]');
+  const formErr  = form.querySelector('.form-error') || (() => {
+    const p = document.createElement('p');
+    p.className = 'form-error';
+    p.setAttribute('role', 'alert');
+    form.appendChild(p);
+    return p;
+  })();
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    formErr.textContent = '';
+    formErr.style.display = 'none';
+
+    resetPipeline();
+
+    let data;
+    try {
+      const res = await fetch('/submit', {
+        method:  'POST',
+        headers: { 'X-Requested-With': 'fetch' },
+        body:    new FormData(form),
+      });
+      data = await res.json();
+      if (!res.ok) {
+        // validation error — show message and leave pipeline in idle state
+        resetPipeline();
+        setState('n-queue', 'pending');
+        const idle = document.getElementById('pipeline-idle');
+        if (idle) idle.style.display = '';
+        formErr.textContent = data.error || 'Submission failed.';
+        formErr.style.display = '';
+        return;
+      }
+    } catch (_) {
+      resetPipeline();
+      setState('n-queue', 'pending');
+      const idle = document.getElementById('pipeline-idle');
+      if (idle) idle.style.display = '';
+      formErr.textContent = 'Network error — please try again.';
+      formErr.style.display = '';
+      return;
+    }
+
+    history.pushState({}, '', '/video/' + data.id);
+    setDetail('n-queue-detail', data.video_id);
+    connectStream(data.id);
+    refreshHistory();
+  });
+
+  /* ── auto-connect on page load if job is in-flight ── */
+  {% if active_video and active_video.status not in ('done', 'failed') %}
+  connectStream({{ active_video.id }});
+  {% elif active_video %}
+  currentVideoId = {{ active_video.id }};
+  {% endif %}
 })();
 </script>
-{% endif %}
 
 </body>
 </html>
