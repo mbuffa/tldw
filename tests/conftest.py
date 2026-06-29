@@ -1,9 +1,10 @@
+from collections.abc import AsyncIterator
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from langchain_core.runnables import Runnable
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
@@ -49,30 +50,29 @@ def stub_llm(monkeypatch):
     return ctrl
 
 
-@pytest.fixture
-def engine():
-    eng = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
+@pytest_asyncio.fixture
+async def engine():
+    eng = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
         poolclass=StaticPool,
     )
-    Base.metadata.create_all(bind=eng)
+    async with eng.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     yield eng
-    eng.dispose()
+    await eng.dispose()
 
 
-@pytest.fixture
-def db_session(engine):
-    Session = sessionmaker(bind=engine)
-    s = Session()
-    yield s
-    s.rollback()
-    s.close()
+@pytest_asyncio.fixture
+async def db_session(engine) -> AsyncIterator[AsyncSession]:
+    Session = async_sessionmaker(engine, expire_on_commit=False)
+    async with Session() as session:
+        yield session
+        await session.rollback()
 
 
 @pytest_asyncio.fixture
 async def client(db_session):
-    def override_db():
+    async def override_db():
         yield db_session
 
     app.dependency_overrides[get_db] = override_db

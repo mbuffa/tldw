@@ -6,17 +6,18 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.models import Video
 from app.summarizer import (
     SUPPORTED_LANGUAGES,
     extract_video_id,
     normalize_language,
 )
-from app.worker import get_queue, start_workers, subscribe, unsubscribe
+from app.worker import get_queue, start_workers, stop_workers, subscribe, unsubscribe
 
 templates = Jinja2Templates(directory=str(pathlib.Path(__file__).parent / "templates"))
 
@@ -25,6 +26,7 @@ templates = Jinja2Templates(directory=str(pathlib.Path(__file__).parent / "templ
 async def lifespan(app: FastAPI):
     await start_workers()
     yield
+    await stop_workers()
 
 
 app = FastAPI(title="tl;dw", lifespan=lifespan)
@@ -36,8 +38,9 @@ async def healthz():
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request, db: Session = Depends(get_db)):
-    videos = db.query(Video).order_by(Video.created_at.desc()).all()
+async def index(request: Request, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Video).order_by(Video.created_at.desc()))
+    videos = result.scalars().all()
     return templates.TemplateResponse(
         request, "index.html", {"videos": videos, "languages": sorted(SUPPORTED_LANGUAGES)}
     )
@@ -49,7 +52,7 @@ async def submit(
     url: str = Form(...),
     language: str = Form("French"),
     caveman: bool = Form(False),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     is_fetch = request.headers.get("x-requested-with") == "fetch"
     language = normalize_language(language)
@@ -58,7 +61,8 @@ async def submit(
     except ValueError:
         if is_fetch:
             return JSONResponse({"error": "Only YouTube URLs are allowed."}, status_code=400)
-        videos = db.query(Video).order_by(Video.created_at.desc()).all()
+        result = await db.execute(select(Video).order_by(Video.created_at.desc()))
+        videos = result.scalars().all()
         return templates.TemplateResponse(
             request,
             "index.html",
@@ -75,8 +79,8 @@ async def submit(
 
     video = Video(url=url, video_id=vid, status="queued", language=language, caveman=caveman)
     db.add(video)
-    db.commit()
-    db.refresh(video)
+    await db.commit()
+    await db.refresh(video)
 
     await get_queue().put(video.id)
     if is_fetch:
@@ -85,11 +89,13 @@ async def submit(
 
 
 @app.get("/video/{slug}", response_class=HTMLResponse)
-async def video_page(request: Request, slug: str, db: Session = Depends(get_db)):
-    video = db.query(Video).filter(Video.slug == slug).first()
+async def video_page(request: Request, slug: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Video).where(Video.slug == slug))
+    video = result.scalar_one_or_none()
     if not video:
         raise HTTPException(status_code=404, detail="Not found")
-    videos = db.query(Video).order_by(Video.created_at.desc()).all()
+    result = await db.execute(select(Video).order_by(Video.created_at.desc()))
+    videos = result.scalars().all()
     return templates.TemplateResponse(
         request,
         "index.html",
@@ -98,12 +104,16 @@ async def video_page(request: Request, slug: str, db: Session = Depends(get_db))
 
 
 @app.get("/video/{slug}/stream")
-async def stream(slug: str, db: Session = Depends(get_db)):
-    video = db.query(Video).filter(Video.slug == slug).first()
-    if not video:
-        raise HTTPException(status_code=404, detail="Not found")
+async def stream(slug: str):
+    # Open a short-lived session just to resolve the slug — close it before
+    # entering the generator so we don't pin a DB connection for the whole stream.
+    async with SessionLocal() as db:
+        result = await db.execute(select(Video).where(Video.slug == slug))
+        video = result.scalar_one_or_none()
+        if not video:
+            raise HTTPException(status_code=404, detail="Not found")
+        vid_id = video.id
 
-    vid_id = video.id
     q = subscribe(vid_id)
 
     async def generator():
@@ -129,8 +139,9 @@ async def stream(slug: str, db: Session = Depends(get_db)):
 
 
 @app.get("/api/videos")
-async def list_videos(db: Session = Depends(get_db)):
-    videos = db.query(Video).order_by(Video.created_at.desc()).all()
+async def list_videos(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Video).order_by(Video.created_at.desc()))
+    videos = result.scalars().all()
     return [
         {
             "slug": v.slug,
