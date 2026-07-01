@@ -121,7 +121,8 @@ async def test_process_video_transcript_error():
     steps = [e["step"] for e in events]
     assert steps[0] == "fetching_transcript"
     assert steps[-1] == "error"
-    assert "no transcript" in events[-1]["message"]
+    # Generic message — raw exception text is logged server-side, not exposed to the client.
+    assert "transcript" in events[-1]["message"].lower()
 
 
 @pytest.mark.asyncio
@@ -133,7 +134,8 @@ async def test_process_video_llm_error(stub_llm):
 
     steps = [e["step"] for e in events]
     assert "error" in steps
-    assert "ollama down" in next(e for e in events if e["step"] == "error")["message"]
+    # Generic message — raw exception text is logged server-side, not exposed to the client.
+    assert "summarize" in next(e for e in events if e["step"] == "error")["message"].lower()
 
 
 @pytest.mark.asyncio

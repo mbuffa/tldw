@@ -1,3 +1,5 @@
+from sqlalchemy import select
+
 from app.models import Video
 
 # ---------------------------------------------------------------------------
@@ -13,7 +15,7 @@ async def test_index_empty(client):
 
 async def test_index_lists_videos(client, db_session):
     db_session.add(Video(url="https://youtu.be/dQw4w9WgXcQ", video_id="dQw4w9WgXcQ", status="done"))
-    db_session.commit()
+    await db_session.commit()
 
     resp = await client.get("/")
     assert resp.status_code == 200
@@ -42,7 +44,8 @@ async def test_submit_valid_url_creates_video(client, db_session):
         follow_redirects=False,
     )
 
-    video = db_session.query(Video).first()
+    result = await db_session.execute(select(Video))
+    video = result.scalar_one_or_none()
     assert video is not None
     assert video.video_id == "dQw4w9WgXcQ"
     assert video.language == "English"
@@ -84,20 +87,22 @@ async def test_submit_caveman_flag_stored(client, db_session):
         follow_redirects=False,
     )
 
-    video = db_session.query(Video).first()
+    result = await db_session.execute(select(Video))
+    video = result.scalar_one_or_none()
+    assert video is not None
     assert video.caveman is True
 
 
 # ---------------------------------------------------------------------------
-# GET /video/{id}
+# GET /video/{slug}
 # ---------------------------------------------------------------------------
 
 
 async def test_video_page_exists(client, db_session):
     v = Video(url="https://youtu.be/dQw4w9WgXcQ", video_id="dQw4w9WgXcQ", status="done")
     db_session.add(v)
-    db_session.commit()
-    db_session.refresh(v)
+    await db_session.commit()
+    await db_session.refresh(v)
 
     resp = await client.get(f"/video/{v.slug}")
     assert resp.status_code == 200
@@ -127,7 +132,7 @@ async def test_api_videos_returns_list(client, db_session):
     db_session.add(
         Video(url="https://youtu.be/zzzzzyyyyyx", video_id="zzzzzyyyyyx", status="queued")
     )
-    db_session.commit()
+    await db_session.commit()
 
     resp = await client.get("/api/videos")
     assert resp.status_code == 200

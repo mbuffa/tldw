@@ -32,11 +32,7 @@ def upgrade() -> None:
     conn = op.get_bind()
     rows = conn.execute(sa.select(_videos.c.id).where(_videos.c.slug == None))  # noqa: E711
     for (row_id,) in rows:
-        conn.execute(
-            sa.update(_videos)
-            .where(_videos.c.id == row_id)
-            .values(slug=_generate_slug())
-        )
+        conn.execute(sa.update(_videos).where(_videos.c.id == row_id).values(slug=_generate_slug()))
 
     # 3. Tighten: make non-null and add unique index (batch mode required for SQLite).
     with op.batch_alter_table("videos") as batch_op:

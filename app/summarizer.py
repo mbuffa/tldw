@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import re
 from collections.abc import AsyncIterator
 from urllib.parse import urlparse
@@ -6,6 +8,8 @@ from langchain_core.prompts import PromptTemplate
 from youtube_transcript_api import YouTubeTranscriptApi
 
 from app.llm import get_llm
+
+logger = logging.getLogger(__name__)
 
 YOUTUBE_ID_RE = re.compile(r"(?:v=|youtu\.be/|embed/|shorts/)([a-zA-Z0-9_-]{11})")
 
@@ -67,10 +71,14 @@ async def process_video(
     yield {"step": "fetching_transcript", "message": "Fetching transcript..."}
 
     try:
-        fetched = YouTubeTranscriptApi().fetch(video_id, languages=["en", "fr"])
+        # Wrap the blocking network call so it doesn't stall the event loop.
+        fetched = await asyncio.to_thread(
+            lambda: YouTubeTranscriptApi().fetch(video_id, languages=["en", "fr"])
+        )
         transcript = " ".join(snippet.text for snippet in fetched)
-    except Exception as e:
-        yield {"step": "error", "message": f"Failed to fetch transcript: {e}"}
+    except Exception:
+        logger.exception("Failed to fetch transcript for video %s", video_id)
+        yield {"step": "error", "message": "Failed to fetch transcript."}
         return
 
     truncated = len(transcript) > MAX_TRANSCRIPT_CHARS
@@ -95,8 +103,9 @@ async def process_video(
         async for chunk in chain.astream(payload):
             summary_chunks.append(chunk)
             yield {"step": "streaming", "chunk": chunk}
-    except Exception as e:
-        yield {"step": "error", "message": f"Failed to summarize: {e}"}
+    except Exception:
+        logger.exception("Failed to summarize video %s", video_id)
+        yield {"step": "error", "message": "Failed to summarize."}
         return
 
     summary = "".join(summary_chunks)
